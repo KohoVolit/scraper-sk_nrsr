@@ -1,0 +1,9 @@
+- bug: nestahuju sa clenstva v `Výbor NR SR pre európske záležitosti` a v `Klub SaS`
+- zmenit v test.py ukazkoveho poslanca z Jozsefa Nagya na ineho, ktory ma clenstva
+- scrape NRSR and check VPAPI README.rst API links
+- check Scrapy and Pupa
+- create Session class?
+- scraping of Speeches, ...
+- scraping of other Person info
+- historicki predsedovia parlamentu a rucne opravy clenstiev (historickych clenov vlad) podla Wikipedie?, resp. moznost rucnych oprav vseobecne
+- ? parsers as a separate Flask application
