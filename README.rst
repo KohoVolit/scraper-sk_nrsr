@@ -52,7 +52,7 @@ Create environment variable with name ``VPAPI_PWD_SK_NRSR`` that contains the pa
 
   .. code-block:: console
 
-      $ export VPAPI_PWD_SK_NRSR type-password-here
+      $ export VPAPI_PWD_SK_NRSR=type-password-here
 
 
 Running
