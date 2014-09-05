@@ -6,11 +6,13 @@ import os.path
 import argparse
 import logging
 import unittest
+import sys
+import io
 
 import vpapi
 import parse
 import scrapeutils
-from test import *
+import test
 
 LOGS_PATH = 'logs'
 scrapeutils.USE_WEBCACHE = True
@@ -295,7 +297,7 @@ class Membership:
 
 		for member in group['členovia']:
 			logging.info('Scraping membership of `%s`' % member['meno'])
-			
+
 			# if member MP is not scraped yet, scrape and save him
 			resp = vpapi.get('people',
 				where={'identifiers': {'$elemMatch': {'identifier': member['id'], 'scheme': 'nrsr.sk'}}},
@@ -385,7 +387,7 @@ class Membership:
 		if key in candidate or key in existing:
 			candidate[key] = e or c
 		return True
-		
+
 
 def scrape_people(term):
 	"""Scrape and save people, organizations and memberships for the
@@ -431,11 +433,11 @@ def scrape_motions(term):
 	starting from the oldest ones. At most 1000 motions are scraped at
 	a time. One Motion item, one VoteEvent item and many Vote items
 	are created for each scraped motion detail page.
-	
+
 	Returns number of scraped motions.
 	"""
 	logging.info('Scraping motions of term `%s`' % term)
-	
+
 	# prepare mappings from source identifier to id for MPs and caucuses
 	resp = vpapi.get('organizations',
 		where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
@@ -454,7 +456,7 @@ def scrape_motions(term):
 		ve = vpapi.get('vote-events', where={'legislative_session': {'name': s['názov']}, 'identifier': last_ve_num})
 		if ve['_items']: break
 		sessions_to_scrape.append((s['názov'], session))
-		
+
 	# scrape motions (at most 1000 at a time) from those sessions
 	scraped_motions_count = 0
 	for session_name, session in reversed(sessions_to_scrape):
@@ -464,7 +466,7 @@ def scrape_motions(term):
 			m_url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % m_id
 			resp = vpapi.get('motions', where={'sources.url': m_url})
 			if resp['_items']: continue
-			
+
 			try:
 				# insert motion
 				logging.info('Scraping motion %s of %s (voted at %s)' % (m['číslo'], session[-1]['číslo'], m['dátum']))
@@ -483,7 +485,7 @@ def scrape_motions(term):
 					motion['result'] = 'pass' if parsed_motion['výsledok'] == 'Návrh prešiel' else 'fail'
 				resp = vpapi.post('motions', motion)
 				motion_id = resp['id']
-				
+
 				# insert vote event
 				vote_event = {
 					'identifier': parsed_motion['číslo'],
@@ -538,7 +540,7 @@ def scrape_motions(term):
 				except NameError:
 					pass
 				raise
-			
+
 			scraped_motions_count += 1
 			if scraped_motions_count >= 1000:
 				logging.info('Scraped %s motions of term `%s`' % (scraped_motions_count, term))
@@ -565,24 +567,28 @@ def main():
 	logging.getLogger('requests').setLevel(logging.ERROR)
 
 	logging.info('Started')
-	try:		
+	try:
 		# set-up the API access
-		vpapi.parliament('xx/test')
-		vpapi.authorize('scrape', os.environ['VPAPI_PWD_XX_TEST'])
+		vpapi.parliament('sk/nrsr')
+		vpapi.authorize('scraper', os.environ['VPAPI_PWD_SK_NRSR'])
 
 		# indicate that the scraper has started
 		db_log = vpapi.post('logs', {'status': 'running', 'file': logname, 'params': args.__dict__})
 
 		# clear cached source files
+		logging.info('Clearing cached files')
 		scrapeutils.clear_cache()
-		
+
 		# test parser functions
-		t = unittest.main(exit=False, verbosity=0)
-		if t.result.errors or t.result.failures:
+		logging.info('Testing parser functions')
+		out = io.StringIO()
+		suite = unittest.TestLoader().loadTestsFromModule(sys.modules['test'])
+		result = unittest.TextTestRunner(stream=out).run(suite)
+		logging.info(out.getvalue())
+		if result.errors or result.failures:
 			raise RuntimeError('Unit tests of parser functions failed, update canceled.')
-		
+
 		global effective_date
-		
 		if args.people == 'initial':
 			# initial scrape of all history of people and organizations
 			logging.info('Initial scrape - deleting people, organizations and memberships')
@@ -592,7 +598,7 @@ def main():
 			for term in sorted(parse.terms.keys()):
 				effective_date = parse.terms[term]['end_date'] or date.today().isoformat()
 				scrape_people(term)
-				
+
 		elif args.people == 'recent':
 			# incremental scrape of people and organizations since last scrape
 			effective_date = date.today().isoformat()
@@ -615,10 +621,10 @@ def main():
 			# scrape of motions from the current term
 			term = parse.current_term()
 			scrape_motions(term)
-		
+
 		status = 'finished'
 		logging.info('Finished')
-		
+
 	except Exception as e:
 		logging.critical(e, exc_info=True)
 		if hasattr(e, 'response'):
@@ -629,6 +635,6 @@ def main():
 		if 'db_log' in locals():
 			vpapi.patch('logs/%s' % db_log['id'], {'status': status})
 
-		
+
 if __name__ == '__main__':
 	main()

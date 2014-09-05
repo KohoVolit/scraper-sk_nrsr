@@ -177,6 +177,7 @@ def group(type, id):
 	if 'Unexpected error!' in content:
 		raise RuntimeError("group of type '%s' with id '%s' not found")
 
+	content = content.replace('member_vez', 'member')	# exception in committee with id=119
 	html = lxml.html.fromstring(content)
 
 	result = {
@@ -212,7 +213,7 @@ def group(type, id):
 				'id': re.search(r'PoslanecID=(\d+)', div.find('.//a').get('href')).group(1),
 				'fotka':  'http://www.nrsr.sk/web/' + div.find('.//img').get('src'),
 				'meno': div.findtext('.//a/strong'),
-				'obdobia': [{'rola': div.findtext('.//span').lower()}],
+				'obdobia': [{'rola': div.findtext('.//span[1]').lower()}],
 			}
 			if type != 'caucus':
 				member['klub'] = div.findtext('.//em')[1:-1]

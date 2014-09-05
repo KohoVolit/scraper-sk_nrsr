@@ -46,25 +46,30 @@ class ParseMp(unittest.TestCase):
 	samples = [
 		# MP of current term
 		{
-			"id": "811",
+			"id": "773",
 			"term": "6",
 			"memb_index": 1,
 			"expected":
 			{
-				"id": "811",
-				"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=811&CisObdobia=6",
-				"meno": "József",
-				"priezvisko": "Nagy",
-				"titul": "Ing.",
-				"kandidoval(a) za": "MOST-HÍD",
-				"narodený(á)": "11. 3. 1968",
-				"národnosť": "maďarská",
-				"bydlisko": "Dunajská Streda",
+				"id": "773",
+				"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=773&CisObdobia=6",
+				"meno": "Jozef",
+				"priezvisko": "Viskupič",
+				"titul": "Mgr.",
+				"kandidoval(a) za": "OĽaNO",
+				"narodený(á)": "8. 2. 1976",
+				"národnosť": "slovenská",
+				"bydlisko": "Trnava",
 				"kraj": "Trnavský",
-				"e-mail": "jozsef_nagy@nrsr.sk",
-				"www": "www.nagyjozsef.sk",
-				"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=811&ImageWidth=140",
-				"členstvo": []
+				"e-mail": "jozef_viskupic@nrsr.sk",
+				"www": "www.jozefviskupic.sk",
+				"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=773&ImageWidth=140",
+				"členstvo": [
+					{
+						"meno": "Výbor NR SR pre európske záležitosti", 
+						"rola": "overovateľ"
+					}
+				]
 			},
 		},
 		# MP of a former term

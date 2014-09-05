@@ -40,7 +40,7 @@ def download(url, method='GET', data=None, url_extension=''):
 
 def clear_cache():
 	"""Clears the cache directory."""
-	shutil.rmtree(WEBCACHE_PATH + '/')
+	shutil.rmtree(WEBCACHE_PATH + '/', ignore_errors=True)
 
 def plaintext(obj, skip=None):
 	"""Checks all fields of `obj` structure and converts HTML entities
