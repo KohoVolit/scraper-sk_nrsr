@@ -631,9 +631,14 @@ class ParseSession(unittest.TestCase):
 			result = result[sample['index']]
 			self.assertEqual(result, sample['expected'])
 
+	def test_invalid_session_number(self):
+		"""parse.session should fail for a session number that is not integer"""
+		self.assertRaises(ValueError, parse.session, 'abc')
+		
 	def test_nonexistent_session_number(self):
-		"""parse.session should fail for a session number that does not exist"""
-		self.assertRaises(RuntimeError, parse.session, '999')
+		"""parse.session should return empty result for a session number that does not exist"""
+		result = parse.session('999')
+		self.assertEqual(result, [])
 		
 	def test_nonexistent_term(self):
 		"""parse.session should fail for a term that does not exist"""
