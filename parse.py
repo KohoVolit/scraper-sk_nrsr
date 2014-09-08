@@ -389,18 +389,18 @@ def session_list(term=None):
 
 def session(session_number, term=None):
 	"""Parse a session, i.e. the list of voted motions."""
-	term = term or max(terms.keys())
 	if term and term not in terms.keys():
 		raise ValueError("unknown term '%s'" % term)
+	term = term or max(terms.keys())
+	if not session_number.isdigit() or int(session_number) == 0:
+		raise ValueError("Invalid session number '%s'" % session_number)
 		
 	url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/vyhladavanie_vysledok' + \
 		'&ZakZborID=13&CisObdobia=%s&CisSchodze=%s&ShowCisloSchodze=False' % \
 		(term, session_number)
 	content = scrapeutils.download(url)
-	if (not session_number.isdigit() or
-			int(session_number) == 0 or
-			'V systéme nie sú evidované žiadne hlasovania vyhovujúce zadanej požiadavke.' in content):
-		raise RuntimeError("Session number '%s' does not exist in term '%s'" % (session_number, term))
+	if 'V systéme nie sú evidované žiadne hlasovania vyhovujúce zadanej požiadavke.' in content:
+		return []
 	html = lxml.html.fromstring(content)
 
 	result = []
