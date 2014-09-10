@@ -398,6 +398,9 @@ def scrape_people(term):
 	"""
 	logging.info('Scraping people, organizations and memberships of term `%s`' % term)
 
+	global effective_date
+	effective_date = date.today().isoformat() if term == parse.current_term() else parse.terms[term]['end_date']
+
 	# get or make chamber
 	chamber = vpapi.get('organizations', where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
 	if chamber['_items']:
@@ -444,10 +447,10 @@ def get_all_items(resource, **kwargs):
 
 
 def scrape_motions(term):
-	"""Scrape and save motions that are not scraped yet
-	starting from the oldest ones. At most 1000 motions are scraped at
-	a time. One Motion item, one VoteEvent item and many Vote items
-	are created for each scraped motion detail page.
+	"""Scrape and save motions from the given term that are not scraped
+	yet starting from the oldest ones. One Motion item, one VoteEvent
+	item and many Vote items are created for each scraped motion detail
+	page.
 
 	Returns number of scraped motions.
 	"""
@@ -474,7 +477,7 @@ def scrape_motions(term):
 		if m['_items']: break
 		sessions_to_scrape.append((s['názov'], session))
 
-	# scrape motions (at most 1000 at a time) from those sessions
+	# scrape motions from those sessions
 	scraped_motions_count = 0
 	for session_name, session in reversed(sessions_to_scrape):
 		logging.info('Scraping session `%s`' % session_name)
@@ -557,7 +560,7 @@ def scrape_motions(term):
 						})
 					resp = vpapi.post('votes', votes)
 
-			# insertion of the motion, vote event or votes failed
+			# delete incomplete data if insertion of the motion, vote event or votes failed
 			except:
 				if motion_id:
 					vpapi.delete('motions/%s' % motion_id)
@@ -566,9 +569,6 @@ def scrape_motions(term):
 				raise
 
 			scraped_motions_count += 1
-			if scraped_motions_count >= 1000:
-				logging.info('Scraped %s motions of term `%s`' % (scraped_motions_count, term))
-				return scraped_motions_count
 
 	logging.info('Scraped %s motions of term `%s`' % (scraped_motions_count, term))
 	return scraped_motions_count
@@ -578,7 +578,8 @@ def main():
 	# read command-line arguments
 	ap = argparse.ArgumentParser('Scrapes data from Slovak parliament website http://nrsr.sk')
 	ap.add_argument('--people', choices=['initial', 'recent', 'none'], default='recent', help='scrape of people, organizations and memberships')
-	ap.add_argument('--motions', choices=['initial', 'incremental', 'recent', 'none'], default='recent', help='scrape of motions and votes')
+	ap.add_argument('--motions', choices=['initial', 'recent', 'none'], default='recent', help='scrape of motions and votes')
+	ap.add_argument('--term', help='term to scrape recent data from; current term is used when omitted')
 	args = ap.parse_args()
 
 	# set-up logging to a local file
@@ -612,7 +613,6 @@ def main():
 		if result.errors or result.failures:
 			raise RuntimeError('Unit tests of parser functions failed, update canceled.')
 
-		global effective_date
 		if args.people == 'initial':
 			# initial scrape of all history of people and organizations
 			logging.info('Initial scrape - deleting people, organizations and memberships')
@@ -620,30 +620,29 @@ def main():
 			vpapi.delete('organizations')
 			vpapi.delete('people')
 			for term in sorted(parse.terms.keys()):
-				effective_date = parse.terms[term]['end_date'] or date.today().isoformat()
 				scrape_people(term)
 
 		elif args.people == 'recent':
-			# incremental scrape of people and organizations since last scrape
-			effective_date = date.today().isoformat()
-			term = parse.current_term()
+			# incremental scrape of people and organizations since the last scrape
+			term = args.term or parse.current_term()
 			if term not in parse.terms:
-				raise Exception('A new term has started. Scrape canceled. Adjust the terms list in parse.py an rerun for the finished term once more.')
+				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun for the recently finished term once more.' % term)
 			scrape_people(term)
 
-		if args.motions in ('initial', 'incremental'):
-			# scrape of motions from all terms (max 1000 motions at a time)
-			if args.motions == 'initial':
-				logging.info('Initial scrape - deleting motions, vote-events and votes')
-				vpapi.delete('votes')
-				vpapi.delete('vote-events')
-				vpapi.delete('motions')
+		if args.motions == 'initial':
+			# initial scrape of motions from all terms
+			logging.info('Initial scrape - deleting motions, vote-events and votes')
+			vpapi.delete('votes')
+			vpapi.delete('vote-events')
+			vpapi.delete('motions')
 			for term in sorted(parse.terms.keys()):
-				if scrape_motions(term) > 0: break
+				scrape_motions(term)
 
 		elif args.motions == 'recent':
-			# scrape of motions from the current term
-			term = parse.current_term()
+			# incremental scrape of motions since the last scrape
+			term = args.term or parse.current_term()
+			if term not in parse.terms:
+				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun once more.' % term)
 			scrape_motions(term)
 
 		status = 'finished'
