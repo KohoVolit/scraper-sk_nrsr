@@ -440,7 +440,7 @@ def session(session_number, term=None):
 					'url': 'http://www.nrsr.sk/web/' + object.get('href')
 				}
 			vote_link2 = tr.find('td[5]/a').get('href')
-			if vote_link2 is not None:
+			if vote_link2:
 				motion['url']['kluby'] = 'http://www.nrsr.sk/web/' + vote_link2
 			result.append(motion)
 			

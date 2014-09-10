@@ -25,7 +25,10 @@ def sk_to_iso(datestring):
 	try:
 		return datetime.strptime(datestring, '%d.%m.%Y').date().isoformat()
 	except ValueError:
-		return datetime.strptime(datestring, '%d.%m.%Y %H:%M').isoformat(' ')
+		try:
+			return datetime.strptime(datestring, '%d.%m.%Y %H:%M:%S').isoformat(' ')
+		except ValueError:
+			return datetime.strptime(datestring, '%d.%m.%Y %H:%M').isoformat(' ')
 
 
 def datestring_add(datestring, days):
@@ -428,6 +431,18 @@ def scrape_people(term):
 		logging.info('Scraped %s %s' % (len(groups['_items']), type + ('es' if type == 'caucus' else 's')))
 
 
+def get_all_items(resource, **kwargs):
+	"""Read all items from the resource without paging."""
+	result = []
+	page=1
+	while True:
+		resp = vpapi.get(resource, page=page, **kwargs)
+		result.extend(resp['_items'])
+		if 'next' not in resp['_links']: break
+		page += 1
+	return result
+
+
 def scrape_motions(term):
 	"""Scrape and save motions that are not scraped yet
 	starting from the oldest ones. At most 1000 motions are scraped at
@@ -442,8 +457,8 @@ def scrape_motions(term):
 	resp = vpapi.get('organizations',
 		where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
 	chamber_id = resp['_items'][0]['id']
-	resp = vpapi.get('people', projection={'identifiers': 1})
-	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in resp['_items']}
+	resp = get_all_items('people', projection={'identifiers': 1})
+	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in resp}
 	resp = vpapi.get('organizations', where={'classification': 'caucus', 'parent_id': chamber_id})
 	caucuses = {c['name']: c['id'] for c in resp['_items']}
 
@@ -452,30 +467,34 @@ def scrape_motions(term):
 	session_list = parse.session_list(term)
 	for s in session_list['_items']:
 		session = parse.session(s['číslo'], term)
-		last_ve_num = session[-1]['číslo']
-		ve = vpapi.get('vote-events', where={'legislative_session': {'name': s['názov']}, 'identifier': last_ve_num})
-		if ve['_items']: break
+		if len(session) == 0: continue
+		last_motion_id = session[-1]['id']
+		m = vpapi.get('motions',
+			where={'sources.url': 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % last_motion_id})
+		if m['_items']: break
 		sessions_to_scrape.append((s['názov'], session))
 
 	# scrape motions (at most 1000 at a time) from those sessions
 	scraped_motions_count = 0
 	for session_name, session in reversed(sessions_to_scrape):
 		logging.info('Scraping session `%s`' % session_name)
-		for m in session:
+		for i, m in enumerate(session):
 			m_id = re.search(r'ID=(\d+)', m['url']['výsledok']).group(1)
 			m_url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % m_id
 			resp = vpapi.get('motions', where={'sources.url': m_url})
 			if resp['_items']: continue
 
 			try:
+				motion_id, vote_event_id = None, None
+
 				# insert motion
-				logging.info('Scraping motion %s of %s (voted at %s)' % (m['číslo'], session[-1]['číslo'], m['dátum']))
+				logging.info('Scraping motion %s of %s (voted at %s)' % (i+1, len(session), m['dátum']))
 				parsed_motion = parse.motion(m['id'])
 				motion = {
 					'organization_id': chamber_id,
 					'legislative_session': {'name': session_name},
 					'text': parsed_motion['názov'],
-					'date': sk_to_iso(parsed_motion['dátum']),
+					'date': sk_to_iso(m['dátum']),
 					'sources': [{
 						'url': parsed_motion['url'],
 						'note': 'Hlasovanie na webe NRSR'
@@ -492,7 +511,7 @@ def scrape_motions(term):
 					'motion_id': motion_id,
 					'organization_id': chamber_id,
 					'legislative_session': {'name': session_name},
-					'start_date': sk_to_iso(parsed_motion['dátum']),
+					'start_date': motion['date'],
 					'sources': [{
 						'url': parsed_motion['url'],
 						'note': 'Hlasovanie na webe NRSR'
@@ -501,18 +520,24 @@ def scrape_motions(term):
 				if 'výsledok' in parsed_motion:
 					vote_event['result'] = motion['result']
 				if 'súčty' in parsed_motion:
+					options = {
+						'yes': '[z] za',
+						'no': '[p] proti',
+						'abstain': '[?] zdržalo sa',
+						'absent': '[0] neprítomní',
+						'not voting': '[n] nehlasovalo'
+					}
 					vote_event['counts'] = [
-						{'option': 'yes', 'value': int(parsed_motion['súčty']['[z] za'])},
-						{'option': 'no', 'value': int(parsed_motion['súčty']['[p] proti'])},
-						{'option': 'abstain', 'value': int(parsed_motion['súčty']['[?] zdržalo sa'])},
-						{'option': 'absent', 'value': int(parsed_motion['súčty']['[0] neprítomní'])},
-						{'option': 'not voting', 'value': int(parsed_motion['súčty']['[n] nehlasovalo'])},
+						{'option': o, 'value': int(parsed_motion['súčty'][s])}
+						for o, s in options.items() if parsed_motion['súčty'][s] != ''
 					]
+					if len(vote_event['counts']) == 0:
+						del vote_event['counts']
 				resp = vpapi.post('vote-events', vote_event)
 				vote_event_id = resp['id']
 
 				# insert votes
-				if 'hlasy' in parsed_motion:
+				if 'hlasy' in parsed_motion and len(parsed_motion['hlasy']) > 0:
 					vote_options = {
 						'z': 'yes',
 						'p': 'no',
@@ -526,19 +551,18 @@ def scrape_motions(term):
 						if v['hlas'] == '-': continue
 						votes.append({
 							'vote_event_id': vote_event_id,
-							'voter_id': mps[v['id']],
 							'option': vote_options[v['hlas']],
+							'voter_id': mps.get(v['id']),
 							'group_id': caucuses.get(v['klub']),
 						})
 					resp = vpapi.post('votes', votes)
 
 			# insertion of the motion, vote event or votes failed
 			except:
-				try:
+				if motion_id:
 					vpapi.delete('motions/%s' % motion_id)
+				if vote_event_id:
 					vpapi.delete('vote-events/%s' % vote_event_id)
-				except NameError:
-					pass
 				raise
 
 			scraped_motions_count += 1
