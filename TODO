@@ -1,7 +1,10 @@
-- scrape NRSR and check VPAPI README.rst API links
-- preskumat velkost db, konkretnych kolekcii, indexov... (pre cz/psp vraj vychadza cca. 2GB na jedno volebne obdobie)
-	http://jasonwilder.com/blog/2012/02/08/optimizing-mongodb-indexes/
-- API: moznost poslat do API vlastne `id`
+- scrape celu NRSR na prod, potom repairDatabase
+	http://docs.mongodb.org/manual/reference/command/repairDatabase/#dbcmd.repairDatabase
+	- overit pocet motions s len(text) > 1024 a pridat `hashed` na motions.text index u vs. databaz
+		- update script:
+			db.motions.dropIndex({"text": 1});
+			db.motions.ensureIndex({"text": "hashed"});
+
 - check Scrapy and Pupa
 - create Session class?
 - scraping of Speeches, ...

@@ -2,7 +2,7 @@ import os.path
 import hashlib
 import requests
 import shutil
-import html.parser
+import html
 
 USE_WEBCACHE = False
 WEBCACHE_PATH = 'webcache'
@@ -38,9 +38,11 @@ def download(url, method='GET', data=None, url_extension=''):
 
 	return resp.text
 
+
 def clear_cache():
 	"""Clears the cache directory."""
 	shutil.rmtree(WEBCACHE_PATH + '/', ignore_errors=True)
+
 
 def plaintext(obj, skip=None):
 	"""Checks all fields of `obj` structure and converts HTML entities
@@ -51,8 +53,7 @@ def plaintext(obj, skip=None):
 	in the `skip` argument.
 	"""
 	if isinstance(obj, str):
-		h = html.parser.HTMLParser()
-		obj = h.unescape(obj).replace('\xa0', ' ').strip()
+		obj = html.unescape(obj).replace('\xa0', ' ').strip()
 	elif isinstance(obj, list):
 		for i, v in enumerate(obj):
 			obj[i] = plaintext(v)

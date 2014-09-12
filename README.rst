@@ -19,7 +19,7 @@ Requires lxml_ package for Python. On Debian-based distributions can be installe
 
   .. code-block:: console
 
-      $ sudo apt-get install libxml2-dev libxslt-dev zlib1g-dev python3-pip
+      $ sudo apt-get install libxml2-dev libxslt1-dev zlib1g-dev python3-pip
       $ sudo pip3 install lxml
 
 .. _lxml: http://lxml.de
