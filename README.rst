@@ -2,9 +2,10 @@
 sk_nrsr_scraper
 ===============
 
-Scraper of Slovak National Council for `Visegrad+ project`_.
+Scraper of Slovak National Council for `Visegrad+ project`_. Scrapes MPs, their memberships, votes and debates and stores the data into `Visegrad+ parliament API`_.
 
 .. _`Visegrad+ project`: http://www.parldata.eu
+.. _`Visegrad+ parliament API`: https://github.com/KohoVolit/visegrad-parliament-api
 
 .. contents:: :backlinks: none
 
@@ -15,14 +16,20 @@ Installation
 Requirements
 ------------
 
-Requires lxml_ package for Python. On Debian-based distributions can be installed by:
+* lxml_ package for Python to parse HTML documents
+* LibreOffice_ core and unoconv_ to convert documents from RTF format
+
+.. _lxml: http://lxml.de
+.. _LibreOffice: http://www.libreoffice.org/
+.. _unoconv: http://dag.wiee.rs/home-made/unoconv/
+
+On Debian-based distributions all can be installed by:
 
   .. code-block:: console
 
       $ sudo apt-get install libxml2-dev libxslt1-dev zlib1g-dev python3-pip
       $ sudo pip3 install lxml
-
-.. _lxml: http://lxml.de
+      $ sudo apt-get install libreoffice-core unoconv
 
 
 Download

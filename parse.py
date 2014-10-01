@@ -115,7 +115,7 @@ def group_list(type, term=None):
 			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
 			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
 		}
-		ext = '|' + term
+		ext = '|%s' % term
 		content = scrapeutils.download(types[type]['url'], 'POST', data, ext)
 		html = lxml.html.fromstring(content)
 
@@ -270,7 +270,7 @@ def change_list(term=None):
 			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
 			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
 		}
-		ext = '|' + term + '|' + str(page)
+		ext = '|%s|%s' % (term, page)
 		content = scrapeutils.download(url, 'POST', data, ext)
 		html = lxml.html.fromstring(content)
 
@@ -364,7 +364,7 @@ def session_list(term=None):
 			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
 			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
 		}
-		ext = '|' + term
+		ext = '|%s' % term
 		content = scrapeutils.download(url, 'POST', data, ext)
 		html = lxml.html.fromstring(content)
 
@@ -394,7 +394,7 @@ def session(session_number, term=None):
 	term = term or max(terms.keys())
 	if not session_number.isdigit() or int(session_number) == 0:
 		raise ValueError("Invalid session number '%s'" % session_number)
-		
+
 	url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/vyhladavanie_vysledok' + \
 		'&ZakZborID=13&CisObdobia=%s&CisSchodze=%s&ShowCisloSchodze=False' % \
 		(term, session_number)
@@ -413,10 +413,10 @@ def session(session_number, term=None):
 			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
 			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
 		}
-		ext = '|' + term + '|' + str(page)
+		ext = '|%s|%s' % (term, page)
 		content = scrapeutils.download(url, 'POST', data, ext)
 		html = lxml.html.fromstring(content)
-		
+
 		# extract all motions from the current page
 		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid"]//tr'):
 			if tr.get('class') in ('pager', 'tab_zoznam_header'): continue
@@ -431,7 +431,7 @@ def session(session_number, term=None):
 				'id': id.group(1),
 				'url': {
 					'výsledok': 'http://www.nrsr.sk/web/' + vote_event_link,
-				}				
+				}
 			}
 			object = tr.find('td[3]/a')
 			if object is not None:
@@ -443,7 +443,7 @@ def session(session_number, term=None):
 			if vote_link2:
 				motion['url']['kluby'] = 'http://www.nrsr.sk/web/' + vote_link2
 			result.append(motion)
-			
+
 		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid"]//tr[1]//span')
 		if current_page is None: break
 		next_page = current_page.getnext()
@@ -466,7 +466,7 @@ def motion(id):
 	motion = panel.find('.//div[@class="voting_stats_summary_full"]')
 	session_link = motion.find('div[1]//a').get('href')
 	counts = panel.find('.//div[@id="_sectionLayoutContainer_ctl01_ctl00__resultsTablePanel"]/div')
-	
+
 	result = {
 		'url': url,
 		'schôdza': {
@@ -513,12 +513,101 @@ def motion(id):
 					'url': 'http://www.nrsr.sk/web/' + link
 				}
 				result['hlasy'].append(mp)
-				
+
 	related_docs = panel.findall('./ul/li[img]/a')
 	if related_docs:
 		result['dokumenty'] = [{
 			'názov': a.text.strip(),
 			'url': 'http://www.nrsr.sk/web/' + a.get('href')
 		} for a in related_docs]
-	
+
+	return scrapeutils.plaintext(result)
+
+
+def old_debates_list(term):
+	if term not in ['1', '2', '3', '4']:
+		raise ValueError("wrong term '%s'" % term)
+
+	url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/rozprava'
+	content = scrapeutils.download(url)
+	html = lxml.html.fromstring(content)
+
+	# a POST request to emulate choice of older debates in first selectbox
+	data = {
+		'_sectionLayoutContainer$ctl01$_searchIn': 'old',
+		'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
+		'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
+	}
+	ext = '|old'
+	content = scrapeutils.download(url, 'POST', data, ext)
+	html = lxml.html.fromstring(content)
+
+	# a POST request to emulate choice of a term in second selectbox and pressing the button
+	data = {
+		'_sectionLayoutContainer$ctl01$_termNr': term,
+		'_sectionLayoutContainer$ctl01$_search': 'Vyhľadať',
+		'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
+		'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
+	}
+	ext = '|old|%s' % term
+	content = scrapeutils.download(url, 'POST', data, ext)
+	html = lxml.html.fromstring(content)
+
+	result = []
+	page = 1
+	while True:
+		# extract all debates from the current page
+		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__oldDebate"]/tr'):
+			if tr.get('class') in ('pager', 'tab_zoznam_header'): continue
+			session_number = tr.find('td[1]')
+			date = tr.find('td[2]')
+			time_interval = tr.find('td[3]')
+			time = re.search(r'(.*?) - (.*)', time_interval.text)
+			debate = {
+				'schôdza': session_number.text.replace('.', ''),
+				'dátum': date.text,
+				'trvanie': {'od': time.group(1), 'do': time.group(2)},
+			}
+
+			text = tr.find('td[4]/a')
+			if text is not None:
+				link = text.get('href')
+				id = re.search(r'tid=(\d+)', link)
+				debate['text'] = {'url': link, 'id': id.group(1)}
+
+			audio = tr.find('td[5]/a')
+			if audio is not None:
+				link = audio.get('href')
+				id = re.search(r'rid=(\d+)', link)
+				debate['audio'] = {'url': link, 'id': id.group(1)}
+
+			doc = tr.find('td[6]/a')
+			if doc is not None:
+				link = doc.get('href')
+				id = re.search(r'DocID=(\d+)', link)
+				debate['doc'] = {'url': link, 'id': id.group(1)}
+			# fix missing links
+			elif debate['dátum'] == '14. 9. 2005':
+				debate['doc'] = result[-1]['doc']
+
+			result.append(debate)
+
+		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__oldDebate"]//tr[1]//span')
+		if current_page is None: break
+		next_page = current_page.getparent().getnext()
+		if next_page is None: break
+		page += 1
+
+		# a POST request to emulate pager click
+		data = {
+			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_oldDebate',
+			'__EVENTARGUMENT': 'Page$%s' % page,
+			'_sectionLayoutContainer$ctl01$_termNr': term,
+			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
+			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
+		}
+		ext = '|old|%s|%s' % (term, page)
+		content = scrapeutils.download(url, 'POST', data, ext)
+		html = lxml.html.fromstring(content)
+
 	return scrapeutils.plaintext(result)

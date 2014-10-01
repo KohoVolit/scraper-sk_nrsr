@@ -558,7 +558,8 @@ def scrape_motions(term):
 							'voter_id': mps.get(v['id']),
 							'group_id': caucuses.get(v['klub']),
 						})
-					resp = vpapi.post('votes', votes)
+					if len(votes) > 0:
+						resp = vpapi.post('votes', votes)
 
 			# delete incomplete data if insertion of the motion, vote event or votes failed
 			except:
