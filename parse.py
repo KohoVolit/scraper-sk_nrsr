@@ -574,6 +574,8 @@ def debate_of_term1(id):
 	else:
 		url = 'http://www.nrsr.sk/dl/Browser/Document?documentId=%s' % id
 		content = scrapeutils.download(url)
+		if 'Unexpected error!' in content:
+			raise RuntimeError("Debate with id '%s' does not exist" % id)
 
 	# fix markup and parse to HTML tree
 	content = content.replace('12. 9. 1995<o:p></o:p>', '12. septembra 1995')
@@ -618,11 +620,12 @@ def debate_of_terms234(id):
 	return scrapeutils.plaintext(result)
 
 
-def new_debates_list(term, since_date=None):
+def new_debates_list(term, since_date=None, until_date=None):
 	"""Parse list of debate parts for the given term of office from
 	NRSR web. Appropriate for newer terms (since 5th) where split
-	debates are available. If `since_date` is given in ISO format
-	only the debate parts since that date are returned.
+	debates are available. If `since_date` or `until_date` is given
+	in ISO format only the debate parts since/until that date are
+	returned.
 	"""
 	if term not in ['5', '6']:
 		raise ValueError("Parsed transcripts are not available for term '%s'" % term)
@@ -641,7 +644,10 @@ def new_debates_list(term, since_date=None):
 	base_ext = '|new|%s' % term
 	if since_date:
 		data['_sectionLayoutContainer$ctl01$_dateFrom$dateInput'] = since_date + '-00-00-00'
-		base_ext += '|%s' % since_date
+		base_ext += '|s%s' % since_date
+	if until_date:
+		data['_sectionLayoutContainer$ctl01$_dateTo$dateInput'] = since_date + '-00-00-00'
+		base_ext += '|u%s' % since_date
 	content = scrapeutils.download(url, 'POST', data, base_ext)
 	html = lxml.html.fromstring(content)
 
@@ -715,6 +721,8 @@ def debate_of_terms56(id):
 	# download the debate transcript
 	url = 'http://mmserv2.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=%s&ViewType=content&' % id
 	content = scrapeutils.download(url)
+	if 'Unexpected error!' in content:
+		raise RuntimeError("Debate with id '%s' does not exist" % id)
 
 	# parse to HTML tree
 	html = lxml.html.fromstring(content)

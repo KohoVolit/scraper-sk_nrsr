@@ -204,7 +204,7 @@ class ParseGroupList(unittest.TestCase):
 			"expected":
 			{
 				"id": "25",
-				"názov": "Skupina priateľstva s Albánskom, Bosnou a Hercegovinou, Bulharskom, Chorvátskom, Srbskom a  Čiernou horou, Macedónskom a Rumunskom"
+				"názov": "Skupina priateľstva s Albánskom, Bosnou a Hercegovinou, Bulharskom, Chorvátskom, Srbskom a Čiernou horou, Macedónskom a Rumunskom"
 			}
 		},
 	]
@@ -599,7 +599,7 @@ class ParseSession(unittest.TestCase):
 					"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=30051", 
 					"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=30051"
 				}
-			}, 
+			},
 		},
 		# session of a former term
 		{
@@ -620,7 +620,7 @@ class ParseSession(unittest.TestCase):
 					"url": "http://www.nrsr.sk/web/Default.aspx?sid=zakony/cpt&ZakZborID=13&CisObdobia=4&ID=243", 
 					"číslo": "243"
 				}
-			}, 
+			},
 		},
 	]
 
@@ -680,7 +680,7 @@ class ParseMotion(unittest.TestCase):
 						"hlas": "p"
 					},
 				]
-			}, 
+			},
 		},
 		{
 			"id": "30297",
@@ -702,7 +702,7 @@ class ParseMotion(unittest.TestCase):
 						"url": "http://www.nrsr.sk/web//web/Dynamic/Download.aspx?DocID=368031"
 					}
 				],
-			}, 
+			},
 		},
 	]
 
@@ -717,6 +717,85 @@ class ParseMotion(unittest.TestCase):
 	def test_nonexistent_motion_id(self):
 		"""parse.motion should fail for an id that does not exist"""
 		self.assertRaises(RuntimeError, parse.motion, '0')
+
+
+class ParseNewDebatesList(unittest.TestCase):
+	samples = [
+		{
+			"term": "6",
+			"since_date": "2013-07-02",
+			"until_date": "2013-07-02",
+			"index": 1,
+			"expected":
+			{
+				"schôdza": "21",
+				"dátum": "2. 7. 2013",
+				"trvanie": {
+					"do": "9:16:59",
+					"od": "9:04:58"
+				},
+				"druh": "Uvádzajúci uvádza bod",
+				"osoba": {
+					"id": "326",
+					"url": "http://www.nrsr.sk/Default.aspx?sid=poslanci/poslanec&PoslanecID=326&CisObdobia=6",
+					"meno": "Novotný, Viliam",
+					"funkcia": "poslanec NR SR"
+				},
+				"video": {
+					"id": "106774",
+					"url": "http://mmserv2.nrsr.sk/NRSRInternet/Vystupenie/106774/video.html"
+				},
+				"video_rokovania": {
+					"id": "724",
+					"url": "http://mmserv2.nrsr.sk/NRSRInternet/Rokovanie/724/"
+				},
+				"prepis": {
+					"id": "106774",
+					"url": "http://mmserv2.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=106774&ViewType=content&"
+				}
+			},
+		},
+	]
+
+	def test_sample_lists(self):
+		"""parse.new_debates_list should give expected result on sample debate lists"""
+		for sample in self.samples:
+			result = parse.new_debates_list(sample['term'],
+				since_date=sample['since_date'], until_date=sample['until_date'])
+			self.assertEqual(result[sample['index']], sample['expected'])
+
+	def test_wrong_term(self):
+		"""parse.new_debates_list should fail for a term before 5th one"""
+		self.assertRaises(ValueError, parse.new_debates_list, '4')
+
+
+class ParseDebateOfTerms56(unittest.TestCase):
+	samples = [
+		# session of the current term
+		{
+			"id": "78454",
+			"line_index": -1,
+			"expected":
+			{
+				"nadpis": "1. schôdza NR SR ustanovujúca - 1. deň - streda - A. dopoludnia",
+				"podnadpis": "Bugár, Béla, 2012.04.04 09:48 - 10:03",
+				"riadky": [
+					"(Hymna Slovenskej republiky.)"
+				],
+			},
+		},
+	]
+
+	def test_sample_debates(self):
+		"""parse.debates_of_terms56 should give expected result on sample session"""
+		for sample in self.samples:
+			result = parse.debate_of_terms56(sample['id'])
+			result['riadky'] = [result['riadky'][sample['line_index']]]
+			self.assertEqual(result, sample['expected'])
+
+	def test_nonexistent_debate(self):
+		"""parse.debates_of_terms56 should fail for debate that does not exist"""
+		self.assertRaises(RuntimeError, parse.debate_of_terms56, '1')
 
 
 if __name__ == '__main__':

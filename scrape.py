@@ -9,6 +9,7 @@ import unittest
 import sys
 import io
 import lxml.html
+import json
 
 import vpapi
 import parse

@@ -58,7 +58,7 @@ def plaintext(obj, skip=None):
 	"""
 	if isinstance(obj, str):
 		obj = html.unescape(obj).replace('\xa0', ' ').strip()
-		obj = re.sub(r'\s{2,}', ' ', obj)
+		obj = re.sub(r' {2,}', ' ', obj)
 	elif isinstance(obj, list):
 		for i, v in enumerate(obj):
 			obj[i] = plaintext(v)
