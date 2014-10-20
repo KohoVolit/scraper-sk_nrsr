@@ -5,6 +5,8 @@
 
 import re
 import lxml.html
+import os.path
+import subprocess
 
 import scrapeutils
 
@@ -192,7 +194,7 @@ def group(type, id):
 			result['podnadpis']  = p
 	opis = html.find('.//div[@align="justify"]')
 	if opis is not None:
-		result['opis'] = lxml.html.tostring(opis, encoding='unicode')
+		result['opis'] = lxml.html.tostring(opis, encoding='unicode', with_tail=False)
 
 	# current term and older terms are displayed differently
 	if 'Zoznam členov' in content:
@@ -317,7 +319,7 @@ def speaker():
 		'meno': div.find(".//h1").text_content(),
 		'fotka':  'http://www.nrsr.sk/web/' + div.find('.//img').get('src'),
 		'narodený': re.search(r'Narodený: (.*)', narodeny).group(1),
-		'životopis': lxml.html.tostring(div.find('table'), encoding='unicode'),
+		'životopis': lxml.html.tostring(div.find('table'), encoding='unicode', with_tail=False),
 	}
 	return scrapeutils.plaintext(result)
 
@@ -525,74 +527,168 @@ def motion(id):
 
 
 def old_debates_list(term):
+	"""Parse list of debates for the given term of office from NRSR
+	Digital Library.
+	Appropriate for older terms (1.-4.) where debates are not split
+	by speaker."""
 	if term not in ['1', '2', '3', '4']:
-		raise ValueError("wrong term '%s'" % term)
+		raise ValueError("Old style transcripts are not available for term '%s'" % term)
+
+	result = []
+	page = 0
+	while True:
+		url = 'http://www.nrsr.sk/dl/Browser/Grid?nodeType=DocType&legId=13&chamberId=0' + \
+			'&categoryId=1&committeeId=0&documentTypeId=5&folderId=0&meetingNr=' + \
+			'&termNr=%s&pageIndex=%s' % (term, page)
+		content = scrapeutils.download(url)
+		html = lxml.html.fromstring(content)
+
+		# extract all debates from the current page
+		for tr in html.findall('.//table[@class="resultTable"]//tr'):
+			sequence_number = tr.findtext('td[1]/a')
+			title = tr.find('td[2]/a')
+			doc_id = re.search(r'documentId=(\d+)', title.get('href'))
+			debate = {
+				'časť': sequence_number,
+				'názov': title.text,
+				'url': 'http://www.nrsr.sk' + title.get('href'),
+				'id': doc_id.group(1)
+			}
+			result.append(debate)
+
+		page += 1
+		pages = html.findtext('.//div[@class="pager"]/span[last()]')
+		if page >= int(pages): break
+
+	return scrapeutils.plaintext(result)
+
+
+def debate_of_term1(id):
+	"""Parse a debate transcript in term 1 format and return list of
+	its paragraphs' text content."""
+	# download the debate transcript or use a local fixed debate if there is one
+	filename = os.path.join('fixed_debates', 'debate_%s.html' % id)
+	if os.path.exists(filename):
+		with open(filename, 'r') as f:
+			content = f.read()
+	else:
+		url = 'http://www.nrsr.sk/dl/Browser/Document?documentId=%s' % id
+		content = scrapeutils.download(url)
+
+	# fix markup and parse to HTML tree
+	content = content.replace('12. 9. 1995<o:p></o:p>', '12. septembra 1995')
+	content = content.replace('<o:p></o:p>', '')
+	html = lxml.html.fromstring(content)
+
+	# extract paragraph texts, use blank line as paragraph separator
+	result = []
+	text = ''
+	for par in html.findall('.//p'):
+		line = scrapeutils.plaintext(par.text_content())
+		if len(line) > 0 and not re.match(r'\w+ deň rokovania', line):
+			text += '\n%s' % line
+		else:
+			if text:
+				result.append(scrapeutils.clear_hyphens(text, '\n'))
+			text = line
+
+	return scrapeutils.plaintext(result)
+
+
+def debate_of_terms234(id):
+	"""Parse a debate transcript in terms 2-4 format and return list of
+	its paragraphs' text content."""
+	# download RTF file or use a local fixed debate if there is one
+	filename = os.path.join('fixed_debates', 'debate_%s.rtf' % id)
+	if not os.path.exists(filename):
+		url = 'http://www.nrsr.sk/dl/Browser/Document?documentId=%s' % id
+		rtf = scrapeutils.download(url)
+		filename = os.path.join(scrapeutils.WEBCACHE_PATH, 'debate_%s.rtf' % id)
+		with open(filename, 'w') as f:
+			f.write(rtf)
+
+	# convert from RTF to HTML using unoconv using LibreOffice
+	content = subprocess.check_output(['unoconv', '-f', 'html', '--stdout', filename])
+
+	html = lxml.html.fromstring(content)
+	result = []
+	for par in html.findall('./body/p'):
+		result.append(par.text_content())
+
+	return scrapeutils.plaintext(result)
+
+
+def new_debates_list(term, since_date=None):
+	"""Parse list of debate parts for the given term of office from
+	NRSR web. Appropriate for newer terms (since 5th) where split
+	debates are available. If `since_date` is given in ISO format
+	only the debate parts since that date are returned.
+	"""
+	if term not in ['5', '6']:
+		raise ValueError("Parsed transcripts are not available for term '%s'" % term)
 
 	url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/rozprava'
 	content = scrapeutils.download(url)
 	html = lxml.html.fromstring(content)
 
-	# a POST request to emulate choice of older debates in first selectbox
-	data = {
-		'_sectionLayoutContainer$ctl01$_searchIn': 'old',
-		'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
-		'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
-	}
-	ext = '|old'
-	content = scrapeutils.download(url, 'POST', data, ext)
-	html = lxml.html.fromstring(content)
-
-	# a POST request to emulate choice of a term in second selectbox and pressing the button
+	# a POST request to emulate choice of term in second selectbox and pressing the button
 	data = {
 		'_sectionLayoutContainer$ctl01$_termNr': term,
 		'_sectionLayoutContainer$ctl01$_search': 'Vyhľadať',
 		'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
 		'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
 	}
-	ext = '|old|%s' % term
-	content = scrapeutils.download(url, 'POST', data, ext)
+	base_ext = '|new|%s' % term
+	if since_date:
+		data['_sectionLayoutContainer$ctl01$_dateFrom$dateInput'] = since_date + '-00-00-00'
+		base_ext += '|%s' % since_date
+	content = scrapeutils.download(url, 'POST', data, base_ext)
 	html = lxml.html.fromstring(content)
 
 	result = []
 	page = 1
 	while True:
-		# extract all debates from the current page
-		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__oldDebate"]/tr'):
+		# extract all debate parts from the current page
+		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__newDebate"]/tr'):
 			if tr.get('class') in ('pager', 'tab_zoznam_header'): continue
 			session_number = tr.find('td[1]')
 			date = tr.find('td[2]')
 			time_interval = tr.find('td[3]')
 			time = re.search(r'(.*?) - (.*)', time_interval.text)
-			debate = {
+			part_type = time_interval.find('em')
+			speaker = tr.find('td[4]')
+			speaker_label = speaker.find('br').tail.strip('( ')
+			debate_part = {
 				'schôdza': session_number.text.replace('.', ''),
 				'dátum': date.text,
 				'trvanie': {'od': time.group(1), 'do': time.group(2)},
+				'druh': part_type.text or '',
+				'osoba': {'meno': speaker.findtext('strong'), 'funkcia': speaker_label}
 			}
+			speaker_link = speaker.find('a')
+			if speaker_link is not None:
+				speaker_url = speaker_link.get('href')
+				id = re.search(r'PoslanecID=(\d+)', speaker_url)
+				debate_part['osoba']['url'] = speaker_url
+				debate_part['osoba']['id'] = id.group(1)
+			for a in tr.findall('td[5]/a'):
+				link = a.get('href')
+				if 'Vystupenie' in link:
+					id = re.search(r'Vystupenie/(\d+)', link)
+					debate_part['video'] = {'url': link, 'id': id.group(1)}
+				elif 'Rokovanie' in link:
+					id = re.search(r'Rokovanie/(\d+)', link)
+					debate_part['video_rokovania'] = {'url': link, 'id': id.group(1)}
+				elif 'SpeakerSection' in link:
+					id = re.search(r'SpeakerSectionID=(\d+)', link)
+					debate_part['prepis'] = {'url': link, 'id': id.group(1)}
+				else:
+					raise RuntimeError('Unrecognized link in section %s/%s/%s' %
+						(session_number, date, time_interval))
+			result.append(debate_part)
 
-			text = tr.find('td[4]/a')
-			if text is not None:
-				link = text.get('href')
-				id = re.search(r'tid=(\d+)', link)
-				debate['text'] = {'url': link, 'id': id.group(1)}
-
-			audio = tr.find('td[5]/a')
-			if audio is not None:
-				link = audio.get('href')
-				id = re.search(r'rid=(\d+)', link)
-				debate['audio'] = {'url': link, 'id': id.group(1)}
-
-			doc = tr.find('td[6]/a')
-			if doc is not None:
-				link = doc.get('href')
-				id = re.search(r'DocID=(\d+)', link)
-				debate['doc'] = {'url': link, 'id': id.group(1)}
-			# fix missing links
-			elif debate['dátum'] == '14. 9. 2005':
-				debate['doc'] = result[-1]['doc']
-
-			result.append(debate)
-
-		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__oldDebate"]//tr[1]//span')
+		# test if there is a link to next page
+		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__newDebate"]//tr[1]//span')
 		if current_page is None: break
 		next_page = current_page.getparent().getnext()
 		if next_page is None: break
@@ -600,14 +696,38 @@ def old_debates_list(term):
 
 		# a POST request to emulate pager click
 		data = {
-			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_oldDebate',
+			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_newDebate',
 			'__EVENTARGUMENT': 'Page$%s' % page,
 			'_sectionLayoutContainer$ctl01$_termNr': term,
 			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
 			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
 		}
-		ext = '|old|%s|%s' % (term, page)
+		ext = base_ext + '|%s' % page
 		content = scrapeutils.download(url, 'POST', data, ext)
 		html = lxml.html.fromstring(content)
+
+	return scrapeutils.plaintext(result)
+
+
+def debate_of_terms56(id):
+	"""Parse a debate transcript in terms 5-6 format and return its
+	structure."""
+	# download the debate transcript
+	url = 'http://mmserv2.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=%s&ViewType=content&' % id
+	content = scrapeutils.download(url)
+
+	# parse to HTML tree
+	html = lxml.html.fromstring(content)
+	result = {
+		'nadpis': html.findtext('.//h1'),
+		'podnadpis': html.findtext('.//h2'),
+	}
+
+	# parse headings and individual lines used as paragraphs
+	main_block = html.find('.//div[@style="text-align: justify;"]')
+	if main_block is not None:
+		main_content = lxml.html.tostring(main_block, encoding='unicode', with_tail=False)
+		main_content = main_content[len('<div style="text-align: justify;">'):-len('</div>')]
+		result['riadky'] = re.split('<br\s*/?>', main_content)
 
 	return scrapeutils.plaintext(result)

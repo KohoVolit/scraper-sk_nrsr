@@ -8,6 +8,7 @@ import logging
 import unittest
 import sys
 import io
+import lxml.html
 
 import vpapi
 import parse
@@ -17,10 +18,30 @@ import test
 LOGS_PATH = 'logs'
 scrapeutils.USE_WEBCACHE = True
 
+SK_MONTHS = {
+	'január': 1, 'januára': 1,
+	'február': 2, 'februára': 2,
+	'marec': 3 , 'marca': 3,
+	'apríl': 4, 'apríla': 4,
+	'máj': 5, 'mája': 5,
+	'jún': 6, 'júna': 6,
+	'júl': 7, 'júla': 7,
+	'august': 8, 'augusta': 8,
+	'september': 9, 'septembra': 9,
+	'október': 10, 'októbra': 10,
+	'november': 11, 'novembra': 11,
+	'december': 12, 'decembra': 12
+}
+
 def sk_to_iso(datestring):
-	"""Converts date(-time) string in SK format (dd. mm. YYYY.) to ISO
-	format (YYYY-mm-dd).
+	"""Converts date(-time) string in SK format (d. m. YYYY or
+	d. month YYYY) to ISO format (YYYY-mm-dd).
 	"""
+	sk_months_pattern = r'\b|'.join(SK_MONTHS.keys()) + r'\b'
+	m = re.search(sk_months_pattern, datestring)
+	if m:
+		month = m.group(0)
+		datestring = datestring.replace(month, '%s.' % SK_MONTHS[month])
 	datestring = datestring.replace('. ', '.')
 	try:
 		return datetime.strptime(datestring, '%d.%m.%Y').date().isoformat()
@@ -434,6 +455,13 @@ def scrape_people(term):
 		logging.info('Scraped %s %s' % (len(groups['_items']), type + ('es' if type == 'caucus' else 's')))
 
 
+def get_chamber_id(term):
+	"""Return chamber id of the given term."""
+	resp = vpapi.get('organizations',
+		where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
+	return resp['_items'][0]['id']
+
+
 def get_all_items(resource, **kwargs):
 	"""Read all items from the resource without paging."""
 	result = []
@@ -457,9 +485,7 @@ def scrape_motions(term):
 	logging.info('Scraping motions of term `%s`' % term)
 
 	# prepare mappings from source identifier to id for MPs and caucuses
-	resp = vpapi.get('organizations',
-		where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
-	chamber_id = resp['_items'][0]['id']
+	chamber_id = get_chamber_id(term)
 	resp = get_all_items('people', projection={'identifiers': 1})
 	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in resp}
 	resp = vpapi.get('organizations', where={'classification': 'caucus', 'parent_id': chamber_id})
@@ -575,11 +601,451 @@ def scrape_motions(term):
 	return scraped_motions_count
 
 
+def scrape_old_debates(term):
+	"""Scrape and save speeches from debates of the given term, one
+	of those older terms where transcripts of debates are stored in
+	RTF files.
+
+	Returns number of scraped speeches.
+	"""
+
+	def insert_speech(type):
+		"""Insert a speech entity with the given type and data
+		from parent scope variables."""
+		speech = {
+			'organization_id': chamber_id,
+			'legislative_session': {'name': session_name},
+			'section': {'name': section_name},
+			'start_date': date + ' 00:00:00',
+			'number': len(speeches),
+			'type': type,
+			'text': text.strip().replace('[', '(').replace(']', ')'),
+			'sources' : [{
+				'url': debate['url'],
+				'note': 'Prepis debaty v Digitálnej knižnici na webe NRSR'
+			}]
+		}
+		if type != 'scene':
+			speech['speaker_id'] = speaker_id
+			speech['speaker_label'] = label.strip()
+		speeches.append(speech)
+
+	logging.info('Scraping debates of term `%s`' % term)
+	chamber_id = get_chamber_id(term)
+
+	# prepare mapping from MP's name to id
+	resp = get_all_items('people', projection={'given_name': 1, 'additional_name': 1, 'family_name': 1})
+	mps = {}
+	for mp in resp:
+		if 'additional_name' in mp:
+			name = '%s. %s. %s' % (mp['given_name'][0], mp['additional_name'][0], mp['family_name'])
+		else:
+			name = '%s. %s' % (mp['given_name'][0], mp['family_name'])
+		mps[name] = mp['id']
+
+	# load name corrections
+	with open('name_corrections.json', 'r') as f:
+		name_corrections = json.load(f)
+
+	# scrape list of debates
+	debates = parse.old_debates_list(term)
+
+	# add the debate missing in the list
+	if term == '4':
+		debates.append({
+			'názov': 'Autorizovaná rozprava, 48. schôdza NR SR, 3. 2. 2010',
+			'id': '2010_02_03',
+			'url': 'http://www.nrsr.sk/dl/Browser/DsDocument?documentId=391413'
+		})
+
+	speech_count = 0
+	session_name = ''
+	for debate in debates:
+		# skip obsolete debates in the list
+		if term == '1':
+			if (debate['názov'] == 'Stenozáznam' and debate['id'] != '198550' or
+					debate['id'] in ('65890', '65945', '65949')):
+				continue
+		elif term == '2':
+			if debate['názov'].startswith('Stenografická') and debate['id'] != '92098':
+				continue
+
+		logging.info('Scraping debate `%s` (id=%s)' % (debate['názov'], debate['id']))
+		if term == '1':
+			paragraphs = parse.debate_of_term1(debate['id'])
+		else:
+			paragraphs = parse.debate_of_terms234(debate['id'])
+
+		# normalize header of the debate transcript
+		if term == '2':
+			# join first 4 paragraphs and add trailing underscores to mark the header
+			paragraphs = ['%s %s %s %s\n___' % (paragraphs[0], paragraphs[1], paragraphs[2],
+				paragraphs[3])] + paragraphs[4:]
+		elif term in ('3', '4'):
+			# join first paragraphs until " hodine" ending is found
+			# and add trailing underscores to mark the header
+			p = ''
+			while True:
+				p += ' ' + paragraphs.pop(0)
+				if p.endswith('hodine'): break
+			if paragraphs[0].startswith('___'):
+				paragraphs.pop(0)
+			paragraphs.insert(0, p + '\n___')
+
+		# extract speeches from the debate
+		speeches = []
+		text = ''
+		within_scene = False
+		for par in paragraphs:
+			par = par.replace('\n', ' ').strip()
+			if not par: continue
+
+			# fix last scene
+			if re.match(r'Rokovanie.*? schôdze .*?\s+(sa skončilo|skončené)\s+o\s+.*?\s+hodine', par):
+				if not par.startswith('('):
+					par = '(%s)' % par
+
+			# convert slash pairs and brackets to parentheses
+			par = re.sub(r'([^\d])/(.*?)/', r'\1(\2)', par)
+			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
+			# convert all inner nested parentheses to brackets
+			n = 1
+			while n >= 1:
+				(par, n) = re.subn(r'\((.*?)\((\.*?)\)(.*?)\)', r'(\1[\2]\3)', par, flags=re.DOTALL)
+
+			# process eventual multiparagraph scene
+			if par.startswith('(') and par.count('(') > par.count(')'):
+				if text:
+					insert_speech('speech')
+				text = '<p>%s</p>' % par[1:]
+				within_scene = True
+				continue
+			if within_scene:
+				if par.endswith(')') and par.count(')') > par.count('('):
+					text += '\n\n<p>%s</p>' % par[:-1]
+					insert_speech('scene')
+					text = ''
+					within_scene = False
+				else:
+					text += '\n\n<p>%s</p>' % par
+				continue
+
+			# process eventual header
+			header_pattern = r'((\(?(\d+)\.\)?\sschôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s(\d{4}).*?_{3,}$'
+			hd = re.search(header_pattern, par, re.DOTALL)
+			if hd:
+				date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
+				old_session_name = session_name
+				session_name = ('Slávnostné zasadnutie %s' % date
+					if hd.group(1).startswith('sláv')
+					else '%s. schôdza' % hd.group(3))
+				if session_name != old_session_name:
+					section_count = 0
+				section_count += 1
+				section_name = '%s. deň rokovania, %s' % (section_count, date)
+				date = sk_to_iso(date)
+				continue
+
+			# process eventual start of a speech
+			if date < '2001-09-04':
+				# format `Foreign minister J. Doe:`
+				speech_start_pattern = r'(.*?)\b([^\W\d])\.[\s_]+((\w)\.[\s_]+)?(\w+):$'
+			else:
+				# format `J. Doe, foreign minister: speech`
+				speech_start_pattern = r'([^\W\d])\.[\s_]+((\w)\.[\s_]+)?(\w+),\s+(.+?):(.+)$'
+			sp = re.match(speech_start_pattern, par, re.DOTALL)
+			if sp:
+				# save previous speech
+				if text:
+					insert_speech('speech')
+
+				# identify speaker
+				if date < '2001-09-04':
+					name = '%s. %s' % (sp.group(2), sp.group(5))
+					if (sp.group(4)):
+						name = name.replace(' ', ' %s. ' % sp.group(4))
+					label = sp.group(1)
+					par = ''
+				else:
+					name = '%s. %s' % (sp.group(1), sp.group(4))
+					if (sp.group(3)):
+						name = name.replace(' ', ' %s. ' % sp.group(3))
+					label = sp.group(5)
+					par = sp.group(6)
+
+				if name in name_corrections:
+					name = name_corrections[name]
+				label = label[0].lower() + label[1:].strip()
+				text = ''
+				speaker_id = mps.get(name)
+
+				# create unknown speakers
+				if not speaker_id:
+					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, label))
+					name_parts = re.match(r'(\w)\. ((\w)\. )?(\w+)', name)
+					person = {
+						'name': name,
+						'family_name': name_parts.group(4),
+						'given_name': name_parts.group(1)
+					}
+					person['sort_name'] = '%s, %s.' % (person['family_name'], person['given_name'])
+					if name_parts.group(3):
+						person['additional_name'] = name_parts.group(3)
+						person['sort_name'] += ' %s.' % person['additional_name']
+					resp = vpapi.post('people', person)
+					speaker_id = resp['id']
+					mps[name] = speaker_id
+
+			# recognize date(-time) stamps in transcripts
+			ds = re.match(r'^\s*(\d+\.\s\w+\s\d{4})(.*hodine)?\s*$', par)
+			if ds:
+				try:
+					date = sk_to_iso(ds.group(1).strip())
+					continue
+				except ValueError:
+					pass
+
+			# process eventual scene in this paragraph
+			scene_pattern = r'(.*?)\(([\d%s][^\(\)]{2,}[\.?!“])\s*\)(.*)$' % scrapeutils.CS_UPPERS
+			while True:
+				scene = re.match(scene_pattern, par, re.DOTALL)
+				if not scene: break
+				if scene.group(1):
+					text += '\n\n<p>%s</p>' % scene.group(1).strip()
+				if text:
+					insert_speech('speech')
+				text = '<p>%s</p>' % scene.group(2).strip()
+				insert_speech('scene')
+				text = ''
+				par = scene.group(3)
+
+			if par:
+				text += '\n\n<p>%s</p>' % par
+
+		if text:
+			insert_speech('speech')
+
+		vpapi.post('speeches', speeches)
+		logging.info('Scraped %s speeches' % len(speeches))
+		speech_count += len(speeches)
+
+	logging.info('Scraped %s speeches in total' % speech_count)
+
+
+def scrape_new_debates(term):
+	"""Scrape and save speeches from debates of the given term, one
+	of those newer terms where transcripts of debates are published
+	in parts assigned to individual speakers.
+
+	Returns number of scraped speeches.
+	"""
+
+	debate_part_kinds = {
+		'Uvádzajúci uvádza bod': 'speech',
+		'Vstup predsedajúceho': 'speech',
+		'Vystúpenie spoločného spravodajcu': 'speech',
+		'Vystúpenie': 'speech',
+		'Vystúpenie v rozprave': 'speech',
+		'Vystúpenie s faktickou poznámkou': 'speech',
+		'Vystúpenie s procedurálnym návrhom': 'speech',
+		'Prednesenie otázky': 'question',
+		'Zodpovedanie otázky': 'answer',
+		'Doplňujúca otázka / reakcia zadávajúceho': 'question',
+		'Prednesenie interpelácie': 'question',
+		'Odpoveď na interpeláciu': 'answer',
+		'scene': 'scene'
+	}
+
+	def insert_speech(kind):
+		"""Insert a speech entity for the given debate part kind
+		and data from parent scope variables."""
+		speech = {
+			'organization_id': chamber_id,
+			'legislative_session': {'name': session_name},
+			'section': {'name': section_name},
+			'start_date': start_datetime,
+			'end_date': end_datetime,
+			'number': len(speeches) + 1,
+			'type': debate_part_kinds.get(kind, 'speech'),
+			'text': text.strip().replace('[', '(').replace(']', ')'),
+			'sources' : [{
+				'url': dpart_url,
+				'note': 'Prepis časti debaty na webe NRSR'
+			}]
+		}
+		if kind != 'scene':
+			speech['speaker_id'] = speaker_id
+			speech['speaker_label'] = label.strip()
+		speeches.append(speech)
+
+	logging.info('Scraping debates of term `%s`' % term)
+	chamber_id = get_chamber_id(term)
+
+	# prepare mapping from MP's name to id
+	resp = get_all_items('people', projection={'name': 1})
+	mps = {mp['name']: mp['id'] for mp in resp}
+
+	# load name corrections
+	with open('name_corrections.json', 'r') as f:
+		name_corrections = json.load(f)
+
+	# scraping will start since the most recent debate date
+	resp = vpapi.get('speeches',
+		where={'organization_id': chamber_id},
+		sort=[('start_date', -1)])
+	since_date = resp['_items'][0]['start_date'][:10] if resp['_items'] else None
+
+	# scrape list of debate parts
+	debate_parts = parse.new_debates_list(term, since_date)
+
+	speech_count = 0
+	session_name = ''
+	section_name = ''
+	for dp in debate_parts:
+		if 'prepis' not in dp: continue
+
+		# skip already scraped debate parts
+		resp = vpapi.get('speeches', where={'sources.url': dp['prepis']['url']})
+		if resp['_items']: continue
+
+		logging.info('Scraping debate part %s %s-%s (id=%s)' %
+			(dp['dátum'], dp['trvanie']['od'], dp['trvanie']['do'], dp['prepis']['id']))
+		dpart = parse.debate_of_terms56(dp['prepis']['id'])
+
+		start_datetime = sk_to_iso('%s %s' % (dp['dátum'], dp['trvanie']['od']))
+		end_datetime = sk_to_iso('%s %s' % (dp['dátum'], dp['trvanie']['do']))
+		dpart_kind = dp['druh']
+		dpart_url = dp['prepis']['url']
+		sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
+		if sitting is None:
+			logging.info('Sitting number not found in the heading `%s`' % dpart['nadpis'])
+			continue
+		if not (session_name.startswith('%s. ' % dp['schôdza']) and
+				section_name.startswith('%s. ' % sitting.group(1))):
+			# start of a new sitting
+			if section_name:
+				if len(speeches) > 0:
+					vpapi.post('speeches', speeches)
+				logging.info('Scraped %s speeches' % len(speeches))
+				speech_count += len(speeches)
+			speeches = []
+		session_name = '%s. schôdza' % dp['schôdza']
+		section_name = '%s. deň rokovania, %s' % (sitting.group(1), dp['dátum'])
+
+		# add the first speaker name that is sometimes missing
+		first_speaker = '<strong>%s, %s</strong>' % (dp['osoba']['meno'], dp['osoba']['funkcia'])
+		dpart['riadky'].insert(0, first_speaker)
+
+		# extract speeches from the debate part
+		text = ''
+		within_scene = False
+		for par in dpart['riadky']:
+			if not par: continue
+			par = par.replace('\n', ' ').strip()
+
+			# skip eventual speech number
+			if re.match('^(\d+)\.$', par): continue
+
+			# convert slash pairs and brackets to parentheses
+			par = re.sub(r'([^\d])/(.*?)/', r'\1(\2)', par)
+			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
+			# convert all inner nested parentheses to brackets
+			n = 1
+			while n >= 1:
+				(par, n) = re.subn(r'\((.*?)\((\.*?)\)(.*?)\)', r'(\1[\2]\3)', par, flags=re.DOTALL)
+
+			# process eventual multiparagraph scene
+			if par.startswith('(') and par.count('(') > par.count(')'):
+				if text:
+					insert_speech(dpart_kind)
+				text = '<p>%s</p>' % lxml.html.fromstring(par[1:]).text_content()
+				within_scene = True
+				continue
+			if within_scene:
+				if par.endswith(')') and par.count(')') > par.count('('):
+					text += '\n\n<p>%s</p>' % lxml.html.fromstring(par[:-1]).text_content()
+					insert_speech('scene')
+					text = ''
+					within_scene = False
+				else:
+					text += '\n\n<p>%s</p>' % lxml.html.fromstring(par).text_content()
+				continue
+
+			# process eventual new speaker
+			# format `Doe, John, foreign minister`
+			speech_start_pattern = r'<strong>(\w+), (\w+\.?)( (\w+\.?))?, (.*)</strong>'
+			sp = re.match(speech_start_pattern, par, re.DOTALL)
+			if sp:
+				# save previous speech
+				if text:
+					insert_speech(dpart_kind)
+
+				# identify speaker
+				name = '%s %s' % (sp.group(2), sp.group(1))
+				if (sp.group(4)):
+					name = name.replace(' ', ' %s ' % sp.group(4))
+				label = sp.group(5)
+				text = ''
+				if name in name_corrections:
+					name = name_corrections[name]
+				if len(name) == 0: continue
+				speaker_id = mps.get(name)
+
+				# create unknown speakers
+				if not speaker_id:
+					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, label))
+					name_parts = re.match(r'(\w+\.?)( (\w+\.?))? (\w+)', name)
+					person = {
+						'name': name,
+						'family_name': name_parts.group(4),
+						'given_name': name_parts.group(1)
+					}
+					person['sort_name'] = '%s, %s' % (person['family_name'], person['given_name'])
+					if name_parts.group(3):
+						person['additional_name'] = name_parts.group(3)
+						person['sort_name'] += ' %s' % person['additional_name']
+					resp = vpapi.post('people', person)
+					speaker_id = resp['id']
+					mps[name] = speaker_id
+				continue
+
+			# remove HTML tags
+			par = lxml.html.fromstring(par).text_content()
+
+			# process eventual scene in this paragraph
+			scene_pattern = r'(.*?)\(([\d%s][^\(\)]{2,}[\.?!“])\s*\)(.*)$' % scrapeutils.CS_UPPERS
+			while True:
+				scene = re.match(scene_pattern, par, re.DOTALL)
+				if not scene: break
+				if scene.group(1):
+					text += '\n\n<p>%s</p>' % scene.group(1).strip()
+				if text:
+					insert_speech(dpart_kind)
+				text = '<p>%s</p>' % scene.group(2).strip()
+				insert_speech('scene')
+				text = ''
+				par = scene.group(3)
+
+			if par:
+				text += '\n\n<p>%s</p>' % par
+
+		if text:
+			insert_speech(dpart_kind)
+
+	if len(speeches) > 0:
+		vpapi.post('speeches', speeches)
+	logging.info('Scraped %s speeches' % len(speeches))
+	speech_count += len(speeches)
+
+	logging.info('Scraped %s speeches in total' % speech_count)
+
+
 def main():
 	# read command-line arguments
 	ap = argparse.ArgumentParser('Scrapes data from Slovak parliament website http://nrsr.sk')
 	ap.add_argument('--people', choices=['initial', 'recent', 'none'], default='recent', help='scrape of people, organizations and memberships')
-	ap.add_argument('--motions', choices=['initial', 'recent', 'none'], default='recent', help='scrape of motions and votes')
+	ap.add_argument('--votes', choices=['initial', 'recent', 'none'], default='recent', help='scrape of motions and votes')
+	ap.add_argument('--debates', choices=['initial', 'recent', 'none'], default='recent', help='scrape of speeches from debates')
 	ap.add_argument('--term', help='term to scrape recent data from; current term is used when omitted')
 	args = ap.parse_args()
 
@@ -630,21 +1096,43 @@ def main():
 				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun for the recently finished term once more.' % term)
 			scrape_people(term)
 
-		if args.motions == 'initial':
-			# initial scrape of motions from all terms
-			logging.info('Initial scrape - deleting motions, vote-events and votes')
+		if args.votes == 'initial':
+			# initial scrape of votes from all terms
+			logging.info('Initial scrape - deleting votes, vote-events and motions')
 			vpapi.delete('votes')
 			vpapi.delete('vote-events')
 			vpapi.delete('motions')
 			for term in sorted(parse.terms.keys()):
 				scrape_motions(term)
 
-		elif args.motions == 'recent':
-			# incremental scrape of motions since the last scrape
+		elif args.votes == 'recent':
+			# incremental scrape of votes since the last scrape
 			term = args.term or parse.current_term()
 			if term not in parse.terms:
 				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun once more.' % term)
 			scrape_motions(term)
+
+		terms_with_old_debates = ('1', '2', '3', '4')
+		if args.debates == 'initial':
+			# initial scrape of debates from all terms
+			logging.info('Initial scrape - deleting speeches')
+			vpapi.delete('speeches')
+			# newer terms are scraped first to get full names of unknown speakers
+			for term in sorted(parse.terms.keys()):
+				if term in terms_with_old_debates: continue
+				scrape_new_debates(term)
+			for term in terms_with_old_debates:
+				scrape_old_debates(term)
+
+		elif args.debates == 'recent':
+			# incremental scrape of debates since the last scrape
+			term = args.term or parse.current_term()
+			if term not in parse.terms:
+				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun once more.' % term)
+			if term in terms_with_old_debates:
+				scrape_old_debates(term)
+			else:
+				scrape_new_debates(term)
 
 		status = 'finished'
 		logging.info('Finished')

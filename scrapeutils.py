@@ -3,9 +3,13 @@ import hashlib
 import requests
 import shutil
 import html
+import re
 
 USE_WEBCACHE = False
 WEBCACHE_PATH = 'webcache'
+CS_LOWERS = 'aáäbcčdďeéěfghiíjklĺľmnňoóôpqrŕřsštťuúůvwxyýzž'
+CS_UPPERS = 'ÁÄBCČDĎEÉĚFGHIÍJKLĹĽMNŇOÓÔPQRŔŘSŠTŤUÚŮVWXYÝZŽ'
+
 
 def download(url, method='GET', data=None, url_extension=''):
 	"""Downloads and returns content from the given URL.
@@ -54,6 +58,7 @@ def plaintext(obj, skip=None):
 	"""
 	if isinstance(obj, str):
 		obj = html.unescape(obj).replace('\xa0', ' ').strip()
+		obj = re.sub(r'\s{2,}', ' ', obj)
 	elif isinstance(obj, list):
 		for i, v in enumerate(obj):
 			obj[i] = plaintext(v)
@@ -62,3 +67,12 @@ def plaintext(obj, skip=None):
 			if isinstance(skip, (tuple, list)) and k in skip: continue
 			obj[k] = plaintext(v)
 	return obj
+
+
+def clear_hyphens(text, eol=''):
+	"""Clear hyphen characters from the text.
+	The hyphen is removed only if followed by the given end-of-line
+	mark (default: empty)."""
+	pattern = r'([%s])-%s([%s])' % (CS_LOWERS, eol, CS_LOWERS)
+	result = re.sub(pattern, r'\1\2', text)
+	return result
