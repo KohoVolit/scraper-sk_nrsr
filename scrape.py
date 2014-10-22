@@ -707,7 +707,7 @@ def scrape_old_debates(term):
 					par = '(%s)' % par
 
 			# convert slash pairs and brackets to parentheses
-			par = re.sub(r'([^\d])/(.*?)/', r'\1(\2)', par)
+			par = re.sub(r'(^|[^\d])/(.*?)/', r'\1(\2)', par)
 			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
 			# convert all inner nested parentheses to brackets
 			n = 1
@@ -732,7 +732,7 @@ def scrape_old_debates(term):
 				continue
 
 			# process eventual header
-			header_pattern = r'((\(?(\d+)\.\)?\sschôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s(\d{4}).*?_{3,}$'
+			header_pattern = r'((\(?(\d+)\.\)?\s+schôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s+(\d{4}).*?_{3,}$'
 			hd = re.search(header_pattern, par, re.DOTALL)
 			if hd:
 				date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
@@ -948,7 +948,7 @@ def scrape_new_debates(term):
 			if re.match('^(\d+)\.$', par): continue
 
 			# convert slash pairs and brackets to parentheses
-			par = re.sub(r'([^\d])/(.*?)/', r'\1(\2)', par)
+			par = re.sub(r'(^|[^\d])/(.*?)/', r'\1(\2)', par)
 			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
 			# convert all inner nested parentheses to brackets
 			n = 1
