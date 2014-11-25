@@ -612,24 +612,27 @@ def scrape_old_debates(term):
 
 	def insert_speech(type):
 		"""Insert a speech entity with the given type and data
-		from parent scope variables."""
+		from parent scope variables and update end date of the
+		corresponding session and sitting."""
 		speech = {
-			'organization_id': chamber_id,
-			'legislative_session': {'name': session_name},
-			'section': {'name': section_name},
-			'start_date': date + ' 00:00:00',
-			'number': len(speeches),
-			'type': type,
 			'text': text.strip().replace('[', '(').replace(']', ')'),
+			'date': date + ' 00:00:00',
+			'type': type,
+			'position': len(speeches) + 1,
+			'event_id': sitting_id,
 			'sources' : [{
 				'url': debate['url'],
 				'note': 'Prepis debaty v Digitálnej knižnici na webe NRSR'
 			}]
 		}
 		if type != 'scene':
-			speech['speaker_id'] = speaker_id
-			speech['speaker_label'] = label.strip()
+			speech['creator_id'] = speaker_id
+			speech['attribution_text'] = attribution.strip()
 		speeches.append(speech)
+		if date > session_end_date:
+			vpapi.patch('events/%s' % session_id, {'end_date': date})
+		if date > sitting_end_date:
+			vpapi.patch('events/%s' % sitting_id, {'end_date': date})
 
 	logging.info('Scraping debates of term `%s`' % term)
 	chamber_id = get_chamber_id(term)
@@ -735,16 +738,45 @@ def scrape_old_debates(term):
 			header_pattern = r'((\(?(\d+)\.\)?\sschôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s(\d{4}).*?_{3,}$'
 			hd = re.search(header_pattern, par, re.DOTALL)
 			if hd:
-				date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
-				old_session_name = session_name
-				session_name = ('Slávnostné zasadnutie %s' % date
-					if hd.group(1).startswith('sláv')
-					else '%s. schôdza' % hd.group(3))
-				if session_name != old_session_name:
-					section_count = 0
-				section_count += 1
-				section_name = '%s. deň rokovania, %s' % (section_count, date)
-				date = sk_to_iso(date)
+				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
+				date = sk_to_iso(sk_date)
+				if hd.group(1).startswith('sláv'):
+					new_session_name = 'Slávnostné zasadnutie %s' % sk_date
+					n = date.replace('-', '')
+				else:
+					new_session_name = '%s. schôdza' % hd.group(3)
+					n = hd.group(3)
+
+				if new_session_name != session_name
+					# create new session event
+					session = {
+						'name': new_session_name,
+						'identifier': '%s-%s' % (term, n),
+						'organization_id': chamber_id,
+						'type': 'session',
+						'start_date': date,
+						'end_date': date,
+					}
+					resp = vpapi.post('events', session)
+					session_id = resp['id']
+					session_name = new_session_name
+					session_end_date = date
+					sitting_count = 0
+
+				# create new sitting event
+				sitting_count += 1
+				sitting = {
+					'name': '%s. deň rokovania, %s' % (sitting_count, sk_date)
+					'identifier': '%s-%s-%s' % (term, n, sitting_count),
+					'organization_id': chamber_id,
+					'type': 'sitting',
+					'start_date': date,
+					'end_date': date,
+					'parent_id': session_id,
+				}
+				resp = vpapi.post('events', sitting)
+				sitting_id = resp['id']
+				sitting_end_date = date
 				continue
 
 			# process eventual start of a speech
@@ -765,24 +797,24 @@ def scrape_old_debates(term):
 					name = '%s. %s' % (sp.group(2), sp.group(5))
 					if (sp.group(4)):
 						name = name.replace(' ', ' %s. ' % sp.group(4))
-					label = sp.group(1)
+					attribution = sp.group(1)
 					par = ''
 				else:
 					name = '%s. %s' % (sp.group(1), sp.group(4))
 					if (sp.group(3)):
 						name = name.replace(' ', ' %s. ' % sp.group(3))
-					label = sp.group(5)
+					attribution = sp.group(5)
 					par = sp.group(6)
 
 				if name in name_corrections:
 					name = name_corrections[name]
-				label = label[0].lower() + label[1:].strip()
+				attribution = attribution[0].lower() + attribution[1:].strip()
 				text = ''
 				speaker_id = mps.get(name)
 
 				# create unknown speakers
 				if not speaker_id:
-					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, label))
+					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, attribution))
 					name_parts = re.match(r'(\w)\. ((\w)\. )?(\w+)', name)
 					person = {
 						'name': name,
@@ -840,7 +872,6 @@ def scrape_new_debates(term):
 
 	Returns number of scraped speeches.
 	"""
-
 	debate_part_kinds = {
 		'Uvádzajúci uvádza bod': 'speech',
 		'Vstup predsedajúceho': 'speech',
@@ -859,25 +890,27 @@ def scrape_new_debates(term):
 
 	def insert_speech(kind):
 		"""Insert a speech entity for the given debate part kind
-		and data from parent scope variables."""
+		and data from parent scope variables and update end date
+		of the corresponding session and sitting."""
 		speech = {
-			'organization_id': chamber_id,
-			'legislative_session': {'name': session_name},
-			'section': {'name': section_name},
-			'start_date': start_datetime,
-			'end_date': end_datetime,
-			'number': len(speeches) + 1,
-			'type': debate_part_kinds.get(kind, 'speech'),
 			'text': text.strip().replace('[', '(').replace(']', ')'),
+			'date': start_datetime,
+			'type': debate_part_kinds.get(kind, 'speech'),
+			'position': len(speeches) + 1,
+			'event_id': sitting_id,
 			'sources' : [{
 				'url': dpart_url,
 				'note': 'Prepis časti debaty na webe NRSR'
 			}]
 		}
 		if kind != 'scene':
-			speech['speaker_id'] = speaker_id
-			speech['speaker_label'] = label.strip()
+			speech['creator_id'] = speaker_id
+			speech['attribution_text'] = attribution.strip()
 		speeches.append(speech)
+		if end_datetime > session_end_date:
+			vpapi.patch('events/%s' % session_id, {'end_date': end_datetime})
+		if end_datetime > sitting_end_date:
+			vpapi.patch('events/%s' % sitting_id, {'end_date': end_datetime})
 
 	logging.info('Scraping debates of term `%s`' % term)
 	chamber_id = get_chamber_id(term)
@@ -901,7 +934,6 @@ def scrape_new_debates(term):
 
 	speech_count = 0
 	session_name = ''
-	section_name = ''
 	for dp in debate_parts:
 		if 'prepis' not in dp: continue
 
@@ -917,21 +949,50 @@ def scrape_new_debates(term):
 		end_datetime = sk_to_iso('%s %s' % (dp['dátum'], dp['trvanie']['do']))
 		dpart_kind = dp['druh']
 		dpart_url = dp['prepis']['url']
-		sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
-		if sitting is None:
+		new_sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
+		if new_sitting is None:
 			logging.info('Sitting number not found in the heading `%s`' % dpart['nadpis'])
 			continue
-		if not (session_name.startswith('%s. ' % dp['schôdza']) and
-				section_name.startswith('%s. ' % sitting.group(1))):
-			# start of a new sitting
-			if section_name:
-				if len(speeches) > 0:
-					vpapi.post('speeches', speeches)
-				logging.info('Scraped %s speeches' % len(speeches))
+
+		if not session_name.startswith('%s. ' % dp['schôdza']):
+			# start new session
+			session_name = '%s. schôdza' % dp['schôdza']
+			session = {
+				'name': session_name,
+				'identifier': '%s-%s' % (term, dp['schôdza']),
+				'organization_id': chamber_id,
+				'type': 'session',
+				'start_date': start_datetime,
+				'end_date': end_datetime,
+			}
+			resp = vpapi.post('events', session)
+			session_id = resp['id']
+			session_end_date = end_datetime
+			sitting_name = ''
+
+		if not sitting_name.startswith('%s. ' % new_sitting.group(1)):
+			# start new sitting
+			sitting_name = '%s. deň rokovania, %s' % (new_sitting.group(1), dp['dátum'])
+			sitting = {
+				'name': sitting_name
+				'identifier': '%s-%s-%s' % (term, dp['schôdza'], new_sitting.group(1)),
+				'organization_id': chamber_id,
+				'type': 'sitting',
+				'start_date': start_datetime,
+				'end_date': end_datetime,
+				'parent_id': session_id,
+			}
+			resp = vpapi.post('events', sitting)
+			sitting_id = resp['id']
+			sitting_end_date = end_datetime
+
+			# save speeches of the previous sitting
+			if len(speeches) > 0:
+				vpapi.post('speeches', speeches)
 				speech_count += len(speeches)
+			if dp != debate_parts[0]:
+				logging.info('Scraped %s speeches' % len(speeches))
 			speeches = []
-		session_name = '%s. schôdza' % dp['schôdza']
-		section_name = '%s. deň rokovania, %s' % (sitting.group(1), dp['dátum'])
 
 		# add the first speaker name that is sometimes missing
 		first_speaker = '<strong>%s, %s</strong>' % (dp['osoba']['meno'], dp['osoba']['funkcia'])
@@ -985,7 +1046,7 @@ def scrape_new_debates(term):
 				name = '%s %s' % (sp.group(2), sp.group(1))
 				if (sp.group(4)):
 					name = name.replace(' ', ' %s ' % sp.group(4))
-				label = sp.group(5)
+				attribution = sp.group(5)
 				text = ''
 				if name in name_corrections:
 					name = name_corrections[name]
@@ -994,7 +1055,7 @@ def scrape_new_debates(term):
 
 				# create unknown speakers
 				if not speaker_id:
-					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, label))
+					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, attribution))
 					name_parts = re.match(r'(\w+\.?)( (\w+\.?))? (\w+)', name)
 					person = {
 						'name': name,
