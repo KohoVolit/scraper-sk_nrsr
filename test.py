@@ -246,7 +246,7 @@ class ParseGroup(unittest.TestCase):
 					{
 						"id": "326",
 						"meno": "Novotný, Viliam",
-						"klub": "Klub SDKÚ – DS",
+						"klub": None,
 						"obdobia": [
 							{
 								"rola": "predseda",
@@ -467,15 +467,15 @@ class ParseChangeList(unittest.TestCase):
 		},
 		{
 			"term": None,
-			"index": -2,
+			"index": -1,
 			"expected":
 			{
 				"dátum": "11. 3. 2012",
 				"poslanec": {
-					"meno": "Mikuš, Jozef",
-					"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=317&CisObdobia=6",
-					"id": "317",
-					"klub": "SDKÚ – DS",
+					"meno": "Martvoň, Anton",
+					"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=883&CisObdobia=6",
+					"id": "883",
+					"klub": "SMER – SD",
 				},
 				"zmena": "Mandát nadobudnutý vo voľbách",
 				"dôvod": "Stal sa poslancom NR SR.",
@@ -495,6 +495,7 @@ class ParseChangeList(unittest.TestCase):
 		self.assertRaises(ValueError, parse.change_list, 'abc')
 
 
+@unittest.skip("Speaker is not used in scraping.")
 class ParseSpeaker(unittest.TestCase):
 	samples = [
 		{
@@ -513,10 +514,12 @@ class ParseSpeaker(unittest.TestCase):
 		"""parse.speaker should give expected result on sample speaker"""
 		for sample in self.samples:
 			result = parse.speaker()
-			result['životopis'] = result['životopis'][:50]
+			if 'životopis' in result:
+				result['životopis'] = result['životopis'][:50]
 			self.assertEqual(result, sample['expected'])
 
 
+@unittest.skip("Deputy speakers are not used in scraping.")
 class ParseDeputySpeakers(unittest.TestCase):
 	samples = [
 		{
@@ -610,7 +613,7 @@ class ParseSession(unittest.TestCase):
 			{
 				"dátum": "19. 06. 2007 17:10:25", 
 				"číslo": "6", 
-				"názov": "Správa o činnosti verejného ochrancu práv (tlač 243).\r\nHlasovanie o návrhu uznesenia.", 
+				"názov": "Správa o činnosti verejného ochrancu práv (tlač 243). Hlasovanie o návrhu uznesenia.", 
 				"id": "20995",
 				"url": {
 					"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=20995", 
@@ -653,7 +656,7 @@ class ParseMotion(unittest.TestCase):
 			"expected":
 			{
 				"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=33841",
-				"názov": "Hlasovanie o pozmeňujúcich a doplňujúcich návrhoch k programu 35. schôdze Národnej rady Slovenskej republiky.\r\nNávrh posl. Kollára.",
+				"názov": "Hlasovanie o pozmeňujúcich a doplňujúcich návrhoch k programu 35. schôdze Národnej rady Slovenskej republiky. Návrh posl. Kollára.",
 				"číslo": "7",
 				"schôdza": {
 					"číslo": "35",

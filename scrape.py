@@ -239,12 +239,6 @@ class Membership:
 		chamber = vpapi.get('organizations', where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
 		oid = chamber['_items'][0]['id']
 
-		# collect specific roles in the chamber
-		roles = {}
-		if term == '6':
-			roles = {ds['id']: 'deputy speaker' for ds in parse.deputy_speakers()}
-			roles['286'] = 'speaker'
-
 		for change in reversed(change_list['_items']):
 			logging.info('Scraping mandate change of `%s` at %s' % (change['poslanec']['meno'], change['dátum']))
 
@@ -261,7 +255,7 @@ class Membership:
 			# create or update the membership
 			m = Membership()
 			m.label = 'Poslanec Národnej rady SR'
-			m.role = roles.get(pid, 'member')
+			m.role = 'member'
 			m.person_id = pid
 			m.organization_id = oid
 			m.sources = [{
@@ -747,7 +741,7 @@ def scrape_old_debates(term):
 					new_session_name = '%s. schôdza' % hd.group(3)
 					n = hd.group(3)
 
-				if new_session_name != session_name
+				if new_session_name != session_name:
 					# create new session event
 					session = {
 						'name': new_session_name,
@@ -766,7 +760,7 @@ def scrape_old_debates(term):
 				# create new sitting event
 				sitting_count += 1
 				sitting = {
-					'name': '%s. deň rokovania, %s' % (sitting_count, sk_date)
+					'name': '%s. deň rokovania, %s' % (sitting_count, sk_date),
 					'identifier': '%s-%s-%s' % (term, n, sitting_count),
 					'organization_id': chamber_id,
 					'type': 'sitting',
@@ -974,7 +968,7 @@ def scrape_new_debates(term):
 			# start new sitting
 			sitting_name = '%s. deň rokovania, %s' % (new_sitting.group(1), dp['dátum'])
 			sitting = {
-				'name': sitting_name
+				'name': sitting_name,
 				'identifier': '%s-%s-%s' % (term, dp['schôdza'], new_sitting.group(1)),
 				'organization_id': chamber_id,
 				'type': 'sitting',

@@ -313,14 +313,23 @@ def speaker():
 	html = lxml.html.fromstring(content)
 
 	div = html.find(".//div[@id='_sectionLayoutContainer__panelContent']")
-	narodeny = div.find("div[@class='article']").text_content()
 	result = {
 		'url': url,
 		'meno': div.find(".//h1").text_content(),
-		'fotka':  'http://www.nrsr.sk/web/' + div.find('.//img').get('src'),
-		'narodený': re.search(r'Narodený: (.*)', narodeny).group(1),
-		'životopis': lxml.html.tostring(div.find('table'), encoding='unicode', with_tail=False),
 	}
+
+	image = div.find('.//img')
+	if image is not None:
+		result['fotka'] = 'http://www.nrsr.sk/web/' + image.get('src')
+
+	born = div.find("div[@class='article']")
+	if born is not None:
+		result['narodený'] = re.search(r'Narodený: (.*)', born.text_content()).group(1)
+
+	bio = div.find('table')
+	if bio is not None:
+		result['životopis'] = lxml.html.tostring(bio, encoding='unicode', with_tail=False)
+
 	return scrapeutils.plaintext(result)
 
 
