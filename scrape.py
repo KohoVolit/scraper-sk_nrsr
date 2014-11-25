@@ -610,7 +610,7 @@ def scrape_old_debates(term):
 		corresponding session and sitting."""
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
-			'date': date + ' 00:00:00',
+			'date': date,
 			'type': type,
 			'position': len(speeches) + 1,
 			'event_id': sitting_id,
@@ -733,7 +733,7 @@ def scrape_old_debates(term):
 			hd = re.search(header_pattern, par, re.DOTALL)
 			if hd:
 				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
-				date = sk_to_iso(sk_date)
+				date = sk_to_iso(sk_date) + ' 00:00:00'
 				if hd.group(1).startswith('sláv'):
 					new_session_name = 'Slávnostné zasadnutie %s' % sk_date
 					n = date.replace('-', '')
@@ -1171,8 +1171,9 @@ def main():
 		terms_with_old_debates = ('1', '2', '3', '4')
 		if args.debates == 'initial':
 			# initial scrape of debates from all terms
-			logging.info('Initial scrape - deleting speeches')
+			logging.info('Initial scrape - deleting speeches and events')
 			vpapi.delete('speeches')
+			vpapi.delete('events')
 			# newer terms are scraped first to get full names of unknown speakers
 			for term in sorted(parse.terms.keys()):
 				if term in terms_with_old_debates: continue
