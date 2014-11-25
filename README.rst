@@ -13,43 +13,56 @@ Scraper of Slovak National Council for `Visegrad+ project`_. Scrapes MPs, their 
 Installation
 ============
 
-Requirements
-------------
+Prerequisites
+-------------
 
-* lxml_ package for Python to parse HTML documents
-* LibreOffice_ core and unoconv_ to convert documents from RTF format
+Requires:
+
+* lxml_ library to parse HTML documents,
+* LibreOffice_ core and unoconv_ to convert documents from RTF format,
+* some Python packages.
 
 .. _lxml: http://lxml.de
 .. _LibreOffice: http://www.libreoffice.org/
 .. _unoconv: http://dag.wiee.rs/home-made/unoconv/
 
-On Debian-based distributions all can be installed by:
+On Debian-based distributions install the libraries:
 
   .. code-block:: console
 
-      $ sudo apt-get install libxml2-dev libxslt1-dev zlib1g-dev python3-pip
-      $ sudo pip3 install lxml
-      $ sudo apt-get install libreoffice-core unoconv
+      $ sudo apt-get install libxml2-dev libxslt1-dev zlib1g-dev libreoffice-core unoconv
 
 
 Download
 --------
 
-Get scraper by:
+Get the scraper:
 
   .. code-block:: console
 
-      $ sudo git clone https://github.com/KohoVolit/sk_nrsr_scraper.git
+      $ mkdir --p /home/projects/scrapers
+      $ cd /home/projects/scrapers
+      $ git clone https://github.com/KohoVolit/sk_nrsr_scraper.git
+      $ mv sk_nrsr_scraper sk_nrsr
 
-and VPAPI client and SSH certificate of the server by:
+Get VPAPI client and SSH certificate of the server:
 
   .. code-block:: console
 
-      $ cd sk_nrsr_scraper
+      $ cd sk_nrsr
       $ wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/vpapi.py
       $ wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/server_cert_prod.pem
 
-	  
+Create a virtual environment for the scraper and install the required packages into it:
+
+  .. code-block:: console
+
+      $ virtualenv /home/projects/.virtualenvs/scrapers/sk_nrsr --no-site-packages
+      $ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
+      $ pip install -r requirements.txt
+      $ deactivate
+
+
 Configuration
 -------------
 
@@ -65,8 +78,9 @@ Create environment variable with name ``VPAPI_PWD_SK_NRSR`` that contains the pa
 Running
 =======
 
-See help message of the scraper for parameters the scraper accepts:
+Run in the virtual environment. See help message of the scraper for parameters the scraper accepts:
 
   .. code-block:: console
 
-      $ python3 scrape.py --help
+      $ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
+      $ python scrape.py --help
