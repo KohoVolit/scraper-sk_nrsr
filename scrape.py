@@ -776,10 +776,10 @@ def scrape_old_debates(term):
 			# process eventual start of a speech
 			if date < '2001-09-04':
 				# format `Foreign minister J. Doe:`
-				speech_start_pattern = r'(.*?)\b([^\W\d])\.[\s_]+((\w)\.[\s_]+)?(\w+):$'
+				speech_start_pattern = r'(.*?)\b([^\W\d])\.[\s_]+((\w)\.[\s_]+)?([\w-]+):$'
 			else:
 				# format `J. Doe, foreign minister: speech`
-				speech_start_pattern = r'([^\W\d])\.[\s_]+((\w)\.[\s_]+)?(\w+),\s+(.+?):(.+)$'
+				speech_start_pattern = r'([^\W\d])\.[\s_]+((\w)\.[\s_]+)?([\w-]+),\s+(.+?):(.+)$'
 			sp = re.match(speech_start_pattern, par, re.DOTALL)
 			if sp:
 				# save previous speech
