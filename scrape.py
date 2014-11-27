@@ -607,12 +607,16 @@ def scrape_old_debates(term):
 	def insert_speech(type):
 		"""Insert a speech entity with the given type and data
 		from parent scope variables and update end date of the
-		corresponding session and sitting."""
+		corresponding session and sitting. Delete `text`
+		variable."""
+		nonlocal text, position
+		if not text: return
+		position = position + 1
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
 			'date': date,
 			'type': type,
-			'position': len(speeches) + 1,
+			'position': position,
 			'event_id': sitting_id,
 			'sources' : [{
 				'url': debate['url'],
@@ -623,6 +627,8 @@ def scrape_old_debates(term):
 			speech['creator_id'] = speaker_id
 			speech['attribution_text'] = attribution.strip()
 		speeches.append(speech)
+		text = ''
+
 		if date > session_end_date:
 			vpapi.patch('events/%s' % session_id, {'end_date': date})
 		if date > sitting_end_date:
@@ -713,8 +719,9 @@ def scrape_old_debates(term):
 
 			# process eventual multiparagraph scene
 			if par.startswith('(') and par.count('(') > par.count(')'):
-				if text:
-					insert_speech('speech')
+				# save eventual previous speech
+				insert_speech('speech')
+
 				text = '<p>%s</p>' % par[1:]
 				within_scene = True
 				continue
@@ -722,7 +729,6 @@ def scrape_old_debates(term):
 				if par.endswith(')') and par.count(')') > par.count('('):
 					text += '\n\n<p>%s</p>' % par[:-1]
 					insert_speech('scene')
-					text = ''
 					within_scene = False
 				else:
 					text += '\n\n<p>%s</p>' % par
@@ -732,6 +738,9 @@ def scrape_old_debates(term):
 			header_pattern = r'((\(?(\d+)\.\)?\s+schôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s+(\d{4}).*?_{3,}$'
 			hd = re.search(header_pattern, par, re.DOTALL)
 			if hd:
+				# save eventual previous speech
+				insert_speech('speech')
+
 				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
 				date = sk_to_iso(sk_date) + ' 00:00:00'
 				if hd.group(1).startswith('sláv'):
@@ -771,6 +780,7 @@ def scrape_old_debates(term):
 				resp = vpapi.post('events', sitting)
 				sitting_id = resp['id']
 				sitting_end_date = date
+				position = 0
 				continue
 
 			# process eventual start of a speech
@@ -782,9 +792,8 @@ def scrape_old_debates(term):
 				speech_start_pattern = r'([^\W\d])\.[\s_]+((\w)\.[\s_]+)?([\w-]+),\s+(.+?):(.+)$'
 			sp = re.match(speech_start_pattern, par, re.DOTALL)
 			if sp:
-				# save previous speech
-				if text:
-					insert_speech('speech')
+				# save eventual previous speech
+				insert_speech('speech')
 
 				# identify speaker
 				if date < '2001-09-04':
@@ -803,7 +812,6 @@ def scrape_old_debates(term):
 				if name in name_corrections:
 					name = name_corrections[name]
 				attribution = attribution[0].lower() + attribution[1:].strip()
-				text = ''
 				speaker_id = mps.get(name)
 
 				# create unknown speakers
@@ -839,18 +847,15 @@ def scrape_old_debates(term):
 				if not scene: break
 				if scene.group(1):
 					text += '\n\n<p>%s</p>' % scene.group(1).strip()
-				if text:
-					insert_speech('speech')
+				insert_speech('speech')
 				text = '<p>%s</p>' % scene.group(2).strip()
 				insert_speech('scene')
-				text = ''
 				par = scene.group(3)
 
 			if par:
 				text += '\n\n<p>%s</p>' % par
 
-		if text:
-			insert_speech('speech')
+		insert_speech('speech')
 
 		vpapi.post('speeches', speeches)
 		logging.info('Scraped %s speeches' % len(speeches))
@@ -885,7 +890,10 @@ def scrape_new_debates(term):
 	def insert_speech(kind):
 		"""Insert a speech entity for the given debate part kind
 		and data from parent scope variables and update end date
-		of the corresponding session and sitting."""
+		of the corresponding session and sitting. Delete `text`
+		variable."""
+		nonlocal text
+		if not text: return
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
 			'date': start_datetime,
@@ -901,6 +909,8 @@ def scrape_new_debates(term):
 			speech['creator_id'] = speaker_id
 			speech['attribution_text'] = attribution.strip()
 		speeches.append(speech)
+		text = ''
+
 		if end_datetime > session_end_date:
 			vpapi.patch('events/%s' % session_id, {'end_date': end_datetime})
 		if end_datetime > sitting_end_date:
@@ -1012,8 +1022,9 @@ def scrape_new_debates(term):
 
 			# process eventual multiparagraph scene
 			if par.startswith('(') and par.count('(') > par.count(')'):
-				if text:
-					insert_speech(dpart_kind)
+				# save eventual previous speech
+				insert_speech(dpart_kind)
+
 				text = '<p>%s</p>' % lxml.html.fromstring(par[1:]).text_content()
 				within_scene = True
 				continue
@@ -1021,7 +1032,6 @@ def scrape_new_debates(term):
 				if par.endswith(')') and par.count(')') > par.count('('):
 					text += '\n\n<p>%s</p>' % lxml.html.fromstring(par[:-1]).text_content()
 					insert_speech('scene')
-					text = ''
 					within_scene = False
 				else:
 					text += '\n\n<p>%s</p>' % lxml.html.fromstring(par).text_content()
@@ -1032,16 +1042,14 @@ def scrape_new_debates(term):
 			speech_start_pattern = r'<strong>(\w+), (\w+\.?)( (\w+\.?))?, (.*)</strong>'
 			sp = re.match(speech_start_pattern, par, re.DOTALL)
 			if sp:
-				# save previous speech
-				if text:
-					insert_speech(dpart_kind)
+				# save eventual previous speech
+				insert_speech(dpart_kind)
 
 				# identify speaker
 				name = '%s %s' % (sp.group(2), sp.group(1))
 				if (sp.group(4)):
 					name = name.replace(' ', ' %s ' % sp.group(4))
 				attribution = sp.group(5)
-				text = ''
 				if name in name_corrections:
 					name = name_corrections[name]
 				if len(name) == 0: continue
@@ -1075,18 +1083,15 @@ def scrape_new_debates(term):
 				if not scene: break
 				if scene.group(1):
 					text += '\n\n<p>%s</p>' % scene.group(1).strip()
-				if text:
-					insert_speech(dpart_kind)
+				insert_speech(dpart_kind)
 				text = '<p>%s</p>' % scene.group(2).strip()
 				insert_speech('scene')
-				text = ''
 				par = scene.group(3)
 
 			if par:
 				text += '\n\n<p>%s</p>' % par
 
-		if text:
-			insert_speech(dpart_kind)
+		insert_speech(dpart_kind)
 
 	if len(speeches) > 0:
 		vpapi.post('speeches', speeches)
