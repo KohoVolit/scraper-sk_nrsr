@@ -710,7 +710,7 @@ def scrape_old_debates(term):
 					par = '(%s)' % par
 
 			# convert slash pairs and brackets to parentheses
-			par = re.sub(r'(^|[^\d])/(.*?)/', r'\1(\2)', par)
+			par = re.sub(r'(^|\s)/(.*?)/(\s|$)', r'\1(\2)\3', par)
 			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
 			# convert all inner nested parentheses to brackets
 			n = 1
