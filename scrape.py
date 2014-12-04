@@ -151,7 +151,7 @@ class Organization:
 		if parse.terms[term]['end_date']:
 			o.dissolution_date = parse.terms[term]['end_date']
 
-		o.name = 'Národná rada %s-%s' % (o.founding_date[:4], getattr(o, 'dissolution_date', '')[:4])
+		o.name = '%s. Národná rada %s-%s' % (term, o.founding_date[:4], getattr(o, 'dissolution_date', '')[:4])
 		o.identifiers = [{'identifier': term, 'scheme': 'nrsr.sk/chamber'}]
 
 		o.contact_details = [
