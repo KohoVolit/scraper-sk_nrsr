@@ -54,9 +54,35 @@ def sk_to_iso(datestring):
 
 
 def datestring_add(datestring, days):
-	"""Returns the date specified as string in ISO format with given number of days added.
+	"""Returns the date specified as string in ISO format with given
+	number of days added.
 	"""
 	return (datetime.strptime(datestring, '%Y-%m-%d') + timedelta(days=days)).date().isoformat()
+
+
+def get_all_items(resource, **kwargs):
+	"""Read all items from the resource without paging."""
+	result = []
+	page=1
+	while True:
+		resp = vpapi.get(resource, page=page, **kwargs)
+		result.extend(resp['_items'])
+		if 'next' not in resp['_links']: break
+		page += 1
+	return result
+
+
+def insert_or_replace(item, resource, query):
+	"""Inserts the item into the resource; if it already exists
+	(identified by query) it is deleted before.
+	"""
+	old_id = None
+	resp = vpapi.get(resource, where=query)
+	if resp['_items']:
+		old_id = resp['_items'][0]['id']
+		vpapi.delete('%s/%s' % (resource, old_id))
+	resp = vpapi.post(resource, item)
+	return resp['id'], old_id
 
 
 class Person:
@@ -457,18 +483,6 @@ def get_chamber_id(term):
 	return resp['_items'][0]['id']
 
 
-def get_all_items(resource, **kwargs):
-	"""Read all items from the resource without paging."""
-	result = []
-	page=1
-	while True:
-		resp = vpapi.get(resource, page=page, **kwargs)
-		result.extend(resp['_items'])
-		if 'next' not in resp['_links']: break
-		page += 1
-	return result
-
-
 def scrape_motions(term):
 	"""Scrape and save motions from the given term that are not scraped
 	yet starting from the oldest ones. One Motion item, one VoteEvent
@@ -751,7 +765,7 @@ def scrape_old_debates(term):
 					n = hd.group(3)
 
 				if new_session_name != session_name:
-					# create new session event
+					# create new session
 					session = {
 						'name': new_session_name,
 						'identifier': '%s-%s' % (term, n),
@@ -760,13 +774,13 @@ def scrape_old_debates(term):
 						'start_date': date,
 						'end_date': date,
 					}
-					resp = vpapi.post('events', session)
-					session_id = resp['id']
+					key = {'identifier': session['identifier']}
+					session_id, _ = insert_or_replace(session, 'events', key)
 					session_name = new_session_name
 					session_end_date = date
 					sitting_count = 0
 
-				# create new sitting event
+				# create new sitting
 				sitting_count += 1
 				sitting = {
 					'name': '%s. deň rokovania, %s' % (sitting_count, sk_date),
@@ -777,8 +791,15 @@ def scrape_old_debates(term):
 					'end_date': date,
 					'parent_id': session_id,
 				}
-				resp = vpapi.post('events', sitting)
-				sitting_id = resp['id']
+				key = {'identifier': sitting['identifier']}
+				sitting_id, replaced_id = insert_or_replace(sitting, 'events', key)
+
+				# delete also speeches of the replaced sitting
+				if replaced_id:
+					orphans = get_all_items('speeches', where={'event_id': replaced_id})
+					for speech in orphans:
+						vpapi.delete('speeches/%s' % speech['id'])
+
 				sitting_end_date = date
 				position = 0
 				continue
@@ -959,7 +980,7 @@ def scrape_new_debates(term):
 			continue
 
 		if not session_name.startswith('%s. ' % dp['schôdza']):
-			# start new session
+			# create new session
 			session_name = '%s. schôdza' % dp['schôdza']
 			session = {
 				'name': session_name,
@@ -969,13 +990,13 @@ def scrape_new_debates(term):
 				'start_date': start_datetime,
 				'end_date': end_datetime,
 			}
-			resp = vpapi.post('events', session)
-			session_id = resp['id']
+			key = {'identifier': session['identifier']}
+			session_id, _ = insert_or_replace(session, 'events', key)
 			session_end_date = end_datetime
 			sitting_name = ''
 
 		if not sitting_name.startswith('%s. ' % new_sitting.group(1)):
-			# start new sitting
+			# create new sitting
 			sitting_name = '%s. deň rokovania, %s' % (new_sitting.group(1), dp['dátum'])
 			sitting = {
 				'name': sitting_name,
@@ -986,8 +1007,15 @@ def scrape_new_debates(term):
 				'end_date': end_datetime,
 				'parent_id': session_id,
 			}
-			resp = vpapi.post('events', sitting)
-			sitting_id = resp['id']
+			key = {'identifier': sitting['identifier']}
+			sitting_id, replaced_id = insert_or_replace(sitting, 'events', key)
+
+			# delete also speeches of the replaced sitting
+			if replaced_id:
+				orphans = get_all_items('speeches', where={'event_id': replaced_id})
+				for speech in orphans:
+					vpapi.delete('speeches/%s' % speech['id'])
+
 			sitting_end_date = end_datetime
 
 			# save speeches of the previous sitting
