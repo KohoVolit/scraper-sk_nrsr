@@ -7,6 +7,7 @@ import re
 import lxml.html
 import os.path
 import subprocess
+import requests
 
 import scrapeutils
 
@@ -70,7 +71,12 @@ def mp(id, term):
 		value = div.find('span')
 		result[label.lower()] = value.text_content() if value is not None else ''
 
-	result['fotka'] = html.find('.//div[@class="mp_foto"]/img').get('src')
+	image_url = html.find('.//div[@class="mp_foto"]/img').get('src')
+	image = requests.get(image_url).content
+	with open('dummy-image.jpg', 'rb') as f:
+		dummy_image = f.read()
+	if image != dummy_image:
+		result['fotka'] = image_url
 
 	result['členstvo'] = []
 	ul = html.find('.//span[@id="_sectionLayoutContainer_ctl01_ctlClenstvoLabel"]').getparent().getnext()
