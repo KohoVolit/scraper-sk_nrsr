@@ -61,15 +61,14 @@ def datestring_add(datestring, days):
 
 
 def get_all_items(resource, **kwargs):
-	"""Read all items from the resource without paging."""
-	result = []
-	page=1
+	"""Generator for all items from the API resource without paging."""
+	page = 1
 	while True:
 		resp = vpapi.get(resource, page=page, **kwargs)
-		result.extend(resp['_items'])
+		for item in resp['_items']:
+			yield item
 		if 'next' not in resp['_links']: break
 		page += 1
-	return result
 
 
 def insert_or_replace(item, resource, query):
@@ -385,8 +384,8 @@ class Membership:
 			'$or': [{'end_date': {'$exists': False}}, {'end_date': {'$in': [None, '']}}],
 			'updated_at': {'$lt': present.isoformat()}
 		}
-		resp = vpapi.get('memberships', where=query)
-		for m in resp['_items']:
+		gen = get_all_items('memberships', where=query)
+		for m in gen:
 			vpapi.patch('memberships/%s' % m['id'], {'end_date': datestring_add(effective_date, -1)})
 
 	def save(self, create_new=True):
@@ -495,10 +494,10 @@ def scrape_motions(term):
 
 	# prepare mappings from source identifier to id for MPs and caucuses
 	chamber_id = get_chamber_id(term)
-	resp = get_all_items('people', projection={'identifiers': 1})
-	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in resp}
-	resp = vpapi.get('organizations', where={'classification': 'caucus', 'parent_id': chamber_id})
-	caucuses = {c['name']: c['id'] for c in resp['_items']}
+	gen = get_all_items('people', projection={'identifiers': 1})
+	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in gen}
+	gen = get_all_items('organizations', where={'classification': 'caucus', 'parent_id': chamber_id})
+	caucuses = {c['name']: c['id'] for c in gen}
 
 	# prepare list of sessions that are not completely scraped yet
 	sessions_to_scrape = []
@@ -652,9 +651,9 @@ def scrape_old_debates(term):
 	chamber_id = get_chamber_id(term)
 
 	# prepare mapping from MP's name to id
-	resp = get_all_items('people', projection={'given_name': 1, 'additional_name': 1, 'family_name': 1})
+	gen = get_all_items('people', projection={'given_name': 1, 'additional_name': 1, 'family_name': 1})
 	mps = {}
-	for mp in resp:
+	for mp in gen:
 		if 'additional_name' in mp:
 			name = '%s. %s. %s' % (mp['given_name'][0], mp['additional_name'][0], mp['family_name'])
 		else:
@@ -941,8 +940,8 @@ def scrape_new_debates(term):
 	chamber_id = get_chamber_id(term)
 
 	# prepare mapping from MP's name to id
-	resp = get_all_items('people', projection={'name': 1})
-	mps = {mp['name']: mp['id'] for mp in resp}
+	gen = get_all_items('people', projection={'name': 1})
+	mps = {mp['name']: mp['id'] for mp in gen}
 
 	# load name corrections
 	with open('name_corrections.json', 'r') as f:
@@ -952,7 +951,7 @@ def scrape_new_debates(term):
 	resp = vpapi.get('speeches',
 		where={'organization_id': chamber_id},
 		sort=[('start_date', -1)])
-	since_date = resp['_items'][0]['start_date'][:10] if resp['_items'] else None
+	since_date = resp['_items'][0]['date'][:10] if resp['_items'] else None
 
 	# scrape list of debate parts
 	debate_parts = parse.new_debates_list(term, since_date)
