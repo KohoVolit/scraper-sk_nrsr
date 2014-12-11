@@ -10,6 +10,7 @@ import sys
 import io
 import lxml.html
 import json
+import pytz
 
 import vpapi
 import parse
@@ -18,6 +19,7 @@ import test
 
 LOGS_PATH = 'logs'
 scrapeutils.USE_WEBCACHE = True
+timezone = pytz.timezone('Europe/Bratislava')
 
 SK_MONTHS = {
 	'január': 1, 'januára': 1,
@@ -36,7 +38,8 @@ SK_MONTHS = {
 
 def sk_to_iso(datestring):
 	"""Converts date(-time) string in SK format (d. m. YYYY or
-	d. month YYYY) to ISO format (YYYY-mm-dd).
+	d. month YYYY) to ISO format (YYYY-mm-dd). If time if present too,
+	the result is YYYY-mm-ddTHH:MM:SS+ZZZZ using the global timezone.
 	"""
 	sk_months_pattern = r'\b|'.join(SK_MONTHS.keys()) + r'\b'
 	m = re.search(sk_months_pattern, datestring)
@@ -48,9 +51,10 @@ def sk_to_iso(datestring):
 		return datetime.strptime(datestring, '%d.%m.%Y').date().isoformat()
 	except ValueError:
 		try:
-			return datetime.strptime(datestring, '%d.%m.%Y %H:%M:%S').isoformat(' ')
+			dt = datetime.strptime(datestring, '%d.%m.%Y %H:%M:%S')
 		except ValueError:
-			return datetime.strptime(datestring, '%d.%m.%Y %H:%M').isoformat(' ')
+			dt = datetime.strptime(datestring, '%d.%m.%Y %H:%M')
+		return timezone.localize(dt).strftime('%Y-%m-%dT%H:%M:%S%z')
 
 
 def datestring_add(datestring, days):
