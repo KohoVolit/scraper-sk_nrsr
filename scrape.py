@@ -75,17 +75,20 @@ def get_all_items(resource, **kwargs):
 		page += 1
 
 
-def insert_or_replace(item, resource, query):
-	"""Inserts the item into the resource; if it already exists
-	(identified by query) it is deleted before.
+def get_or_create(resource, item, key=None):
+	"""Unless the item already exists in the resource (identified by
+	`key` fields) create it. Return id of the item and a bool whether
+	the item was newly created or not. If key is not given, all fields
+	of the item are used as a key.
 	"""
-	old_id = None
+	if key is None:
+		key = item.keys()
+	query = {field: item[field] for field in key}
 	resp = vpapi.get(resource, where=query)
 	if resp['_items']:
-		old_id = resp['_items'][0]['id']
-		vpapi.delete('%s/%s' % (resource, old_id))
+		return resp['_items'][0]['id'], False
 	resp = vpapi.post(resource, item)
-	return resp['id'], old_id
+	return resp['id'], True
 
 
 class Person:
@@ -519,7 +522,25 @@ def scrape_motions(term):
 	scraped_motions_count = 0
 	for session_name, session in reversed(sessions_to_scrape):
 		logging.info('Scraping session `%s`' % session_name)
+
+		# insert the session unless it already exists
+		session = {
+			'name': session['názov'],
+			'identifier': session['číslo'],
+			'organization_id': chamber_id,
+			'type': 'session',
+		}
+		try:
+			session['start_date'] = sk_to_iso(session['trvanie'])
+			session['end_date'] = session['start_date']
+		except ValueError:
+			# multiday session contains votes; dates will be set by debates scraping
+			pass
+		key = ('organization_id', 'type', 'identifier')
+		session_id, _ = get_or_create('events', session, key)
+
 		for i, m in enumerate(session):
+			# check if the motion is already present
 			m_id = re.search(r'ID=(\d+)', m['url']['výsledok']).group(1)
 			m_url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % m_id
 			resp = vpapi.get('motions', where={'sources.url': m_url})
@@ -533,7 +554,7 @@ def scrape_motions(term):
 				parsed_motion = parse.motion(m['id'])
 				motion = {
 					'organization_id': chamber_id,
-					'legislative_session': {'name': session_name},
+					'legislative_session_id': session_id,
 					'text': parsed_motion['názov'],
 					'date': sk_to_iso(m['dátum']),
 					'sources': [{
@@ -551,7 +572,7 @@ def scrape_motions(term):
 					'identifier': parsed_motion['číslo'],
 					'motion_id': motion_id,
 					'organization_id': chamber_id,
-					'legislative_session': {'name': session_name},
+					'legislative_session_id': session_id,
 					'start_date': motion['date'],
 					'sources': [{
 						'url': parsed_motion['url'],
@@ -759,26 +780,28 @@ def scrape_old_debates(term):
 				insert_speech('speech')
 
 				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
-				date = sk_to_iso(sk_date) + ' 00:00:00'
+				date = sk_to_iso(sk_date + ' 00:00:00')
 				if hd.group(1).startswith('sláv'):
-					new_session_name = 'Slávnostné zasadnutie %s' % sk_date
-					n = date.replace('-', '')
+					new_session_name = 'Mimoriadna schôdza'
+					sl = parse.session_list(term)
+					d = '%i. %i. %i' % (date[8:2], date[5:2], date[0:4])
+					new_session_identifier = [s['číslo'] for s in sl if sl['trvanie'] == d].pop()
 				else:
 					new_session_name = '%s. schôdza' % hd.group(3)
-					n = hd.group(3)
+					new_session_identifier = hd.group(3)
 
 				if new_session_name != session_name:
 					# create new session
 					session = {
 						'name': new_session_name,
-						'identifier': '%s-%s' % (term, n),
+						'identifier': new_session_identifier,
 						'organization_id': chamber_id,
 						'type': 'session',
 						'start_date': date,
 						'end_date': date,
 					}
-					key = {'identifier': session['identifier']}
-					session_id, _ = insert_or_replace(session, 'events', key)
+					key = ('organization_id', 'type', 'identifier')
+					session_id, _ = get_or_create('events', session, key)
 					session_name = new_session_name
 					session_end_date = date
 					sitting_count = 0
@@ -787,24 +810,23 @@ def scrape_old_debates(term):
 				sitting_count += 1
 				sitting = {
 					'name': '%s. deň rokovania, %s' % (sitting_count, sk_date),
-					'identifier': '%s-%s-%s' % (term, n, sitting_count),
+					'identifier': str(sitting_count),
 					'organization_id': chamber_id,
 					'type': 'sitting',
 					'start_date': date,
 					'end_date': date,
 					'parent_id': session_id,
 				}
-				key = {'identifier': sitting['identifier']}
-				sitting_id, replaced_id = insert_or_replace(sitting, 'events', key)
-
-				# delete also speeches of the replaced sitting
-				if replaced_id:
-					orphans = get_all_items('speeches', where={'event_id': replaced_id})
-					for speech in orphans:
-						vpapi.delete('speeches/%s' % speech['id'])
-
+				key = ('parent_id', 'type', 'identifier')
+				sitting_id, created = get_or_create('events', sitting, key)
 				sitting_end_date = date
 				position = 0
+
+				# delete existing speeches of the sitting
+				if not created:
+					obsolete = get_all_items('speeches', where={'event_id': sitting_id})
+					for speech in obsolete:
+						vpapi.delete('speeches/%s' % speech['id'])
 				continue
 
 			# process eventual start of a speech
@@ -987,14 +1009,14 @@ def scrape_new_debates(term):
 			session_name = '%s. schôdza' % dp['schôdza']
 			session = {
 				'name': session_name,
-				'identifier': '%s-%s' % (term, dp['schôdza']),
+				'identifier': dp['schôdza'],
 				'organization_id': chamber_id,
 				'type': 'session',
 				'start_date': start_datetime,
 				'end_date': end_datetime,
 			}
-			key = {'identifier': session['identifier']}
-			session_id, _ = insert_or_replace(session, 'events', key)
+			key = ('organization_id', 'type', 'identifier')
+			session_id, _ = get_or_create('events', session, key)
 			session_end_date = end_datetime
 			sitting_name = ''
 
@@ -1003,23 +1025,22 @@ def scrape_new_debates(term):
 			sitting_name = '%s. deň rokovania, %s' % (new_sitting.group(1), dp['dátum'])
 			sitting = {
 				'name': sitting_name,
-				'identifier': '%s-%s-%s' % (term, dp['schôdza'], new_sitting.group(1)),
+				'identifier': new_sitting.group(1),
 				'organization_id': chamber_id,
 				'type': 'sitting',
 				'start_date': start_datetime,
 				'end_date': end_datetime,
 				'parent_id': session_id,
 			}
-			key = {'identifier': sitting['identifier']}
-			sitting_id, replaced_id = insert_or_replace(sitting, 'events', key)
-
-			# delete also speeches of the replaced sitting
-			if replaced_id:
-				orphans = get_all_items('speeches', where={'event_id': replaced_id})
-				for speech in orphans:
-					vpapi.delete('speeches/%s' % speech['id'])
-
+			key = ('parent_id', 'type', 'identifier')
+			sitting_id, created = get_or_create('events', sitting, key)
 			sitting_end_date = end_datetime
+
+			# delete existing speeches of the sitting
+			if not created:
+				obsolete = get_all_items('speeches', where={'event_id': sitting_id})
+				for speech in obsolete:
+					vpapi.delete('speeches/%s' % speech['id'])
 
 			# save speeches of the previous sitting
 			if len(speeches) > 0:
