@@ -942,6 +942,7 @@ def scrape_new_debates(term):
 		if not text: return
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
+			'video': dpart_video,
 			'date': start_datetime,
 			'type': debate_part_kinds.get(kind, 'speech'),
 			'position': len(speeches) + 1,
@@ -999,6 +1000,7 @@ def scrape_new_debates(term):
 		end_datetime = sk_to_iso('%s %s' % (dp['dátum'], dp['trvanie']['do']))
 		dpart_kind = dp['druh']
 		dpart_url = dp['prepis']['url']
+		dpart_video = dp['video']['url']
 		new_sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
 		if new_sitting is None:
 			logging.info('Sitting number not found in the heading `%s`' % dpart['nadpis'])
