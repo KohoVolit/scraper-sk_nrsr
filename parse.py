@@ -75,8 +75,7 @@ def mp(id, term):
 	image = requests.get(image_url).content
 	with open('dummy-image.jpg', 'rb') as f:
 		dummy_image = f.read()
-	if image != dummy_image:
-		result['fotka'] = image_url
+	result['fotka'] = image_url if image != dummy_image else ''
 
 	result['členstvo'] = []
 	ul = html.find('.//span[@id="_sectionLayoutContainer_ctl01_ctlClenstvoLabel"]').getparent().getnext()
@@ -264,26 +263,25 @@ def change_list(term=None):
 	content = scrapeutils.download(url)
 	html = lxml.html.fromstring(content)
 
+	# POST request to emulate term selection
+	data = {
+		'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_currentTerm',
+		'_sectionLayoutContainer$ctl01$_currentTerm': term,
+		'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
+		'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
+		}
+	ext = '|%s|1' % term
+	content = scrapeutils.download(url, 'POST', data, ext)
+	html = lxml.html.fromstring(content)
+
 	result = {
 		'url': url,
 		'_items': []
 	}
-	ctl = 'ctl00'
 	page = 1
 	while True:
-		# scraping of individual pages requires POST request to emulate pager click
-		data = {
-			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_ResultGrid$ctl01$' + ctl,
-			'_sectionLayoutContainer$ctl01$_currentTerm': term,
-			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
-			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
-		}
-		ext = '|%s|%s' % (term, page)
-		content = scrapeutils.download(url, 'POST', data, ext)
-		html = lxml.html.fromstring(content)
-
 		# extract all changes from the current page
-		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__ResultGrid"]//tr'):
+		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__ResultGrid2"]/tr'):
 			if tr.get('class') in ('pager', 'tab_zoznam_header'): continue
 			date = tr.findtext('td[1]')
 			poslanec = tr.find('td[2]')
@@ -302,12 +300,23 @@ def change_list(term=None):
 				'dôvod': tr.findtext('td[4]'),
 			})
 
-		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__ResultGrid"]//tr[1]//span')
+		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__ResultGrid2"]/tr[1]//span')
 		if current_page is None: break
-		next_page = current_page.getnext()
+		next_page = current_page.getparent().getnext()
 		if next_page is None: break
-		ctl = next_page.get('href')[-10:-5]
+
+		# POST request to emulate pager click
 		page += 1
+		data = {
+			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_ResultGrid2',
+			'_sectionLayoutContainer$ctl01$_currentTerm': term,
+			'__EVENTARGUMENT': 'Page$%s' % page,
+			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
+			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
+		}
+		ext = '|%s|%s' % (term, page)
+		content = scrapeutils.download(url, 'POST', data, ext)
+		html = lxml.html.fromstring(content)
 
 	return scrapeutils.plaintext(result)
 
@@ -421,21 +430,10 @@ def session(session_number, term=None):
 	html = lxml.html.fromstring(content)
 
 	result = []
-	ctl = 'ctl00'
 	page = 1
 	while True:
-		# scraping of individual pages requires POST request to emulate pager click
-		data = {
-			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_resultGrid$ctl01$' + ctl,
-			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
-			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
-		}
-		ext = '|%s|%s' % (term, page)
-		content = scrapeutils.download(url, 'POST', data, ext)
-		html = lxml.html.fromstring(content)
-
 		# extract all motions from the current page
-		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid"]//tr'):
+		for tr in html.findall('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid2"]/tr'):
 			if tr.get('class') in ('pager', 'tab_zoznam_header'): continue
 			date = tr.find('td[1]')
 			vote_event = tr.find('td[2]/a')
@@ -461,12 +459,23 @@ def session(session_number, term=None):
 				motion['url']['kluby'] = 'http://www.nrsr.sk/web/' + vote_link2
 			result.append(motion)
 
-		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid"]//tr[1]//span')
+		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid2"]/tr[1]//span')
 		if current_page is None: break
-		next_page = current_page.getnext()
+		next_page = current_page.getparent().getnext()
 		if next_page is None: break
-		ctl = next_page.get('href')[-10:-5]
+
+		# POST request to emulate pager click
 		page += 1
+		data = {
+			'__EVENTTARGET': '_sectionLayoutContainer$ctl01$_resultGrid2',
+			'__EVENTARGUMENT': 'Page$%s' % page,
+			'__VIEWSTATE': html.find('.//input[@id="__VIEWSTATE"]').get('value'),
+			'__EVENTVALIDATION': html.find('.//input[@id="__EVENTVALIDATION"]').get('value'),
+		}
+		ext = '|%s|%s' % (term, page)
+		content = scrapeutils.download(url, 'POST', data, ext)
+		html = lxml.html.fromstring(content)
+
 
 	return scrapeutils.plaintext(result)
 
@@ -694,18 +703,19 @@ def new_debates_list(term, since_date=None, until_date=None):
 				debate_part['osoba']['id'] = id.group(1)
 			for a in tr.findall('td[5]/a'):
 				link = a.get('href')
-				if 'Vystupenie' in link:
-					id = re.search(r'Vystupenie/(\d+)', link)
+				src = a.find('img').get('src')
+				if 'speak' in src:
+					id = re.search(r'SpeakerSectionID=(\d+)', link)
 					debate_part['video'] = {'url': link, 'id': id.group(1)}
-				elif 'Rokovanie' in link:
-					id = re.search(r'Rokovanie/(\d+)', link)
+				elif 'all' in src:
+					id = re.search(r'MeetingID=(\d+)', link)
 					debate_part['video_rokovania'] = {'url': link, 'id': id.group(1)}
-				elif 'SpeakerSection' in link:
+				elif 'rewrite' in src:
 					id = re.search(r'SpeakerSectionID=(\d+)', link)
 					debate_part['prepis'] = {'url': link, 'id': id.group(1)}
 				else:
 					raise RuntimeError('Unrecognized link in section %s/%s/%s' %
-						(session_number, date, time_interval))
+						(session_number.text, date.text, time_interval.text))
 			result.append(debate_part)
 
 		# test if there is a link to next page
@@ -734,7 +744,7 @@ def debate_of_terms56(id):
 	"""Parse a debate transcript in terms 5-6 format and return its
 	structure."""
 	# download the debate transcript
-	url = 'http://mmserv2.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=%s&ViewType=content&' % id
+	url = 'http://tv.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=%s&ViewType=content&' % id
 	content = scrapeutils.download(url)
 	if 'Unexpected error!' in content:
 		raise RuntimeError("Debate with id '%s' does not exist" % id)

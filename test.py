@@ -74,24 +74,24 @@ class ParseMp(unittest.TestCase):
 		},
 		# MP of a former term
 		{
-			"id": "226",
-			"term": "4",
+			"id": "295",
+			"term": "3",
 			"memb_index": None,
 			"expected":
 			{
-				"id": "226",
-				"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=226&CisObdobia=4",
-				"meno": "Pavol",
-				"priezvisko": "Abrhan",
-				"titul": "Ing.",
-				"kandidoval(a) za": "KDH",
-				"narodený(á)": "25. 7. 1959",
+				"id": "295",
+				"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=295&CisObdobia=3",
+				"meno": "Rudolf",
+				"priezvisko": "Zajac",
+				"titul": "MUDr.",
+				"kandidoval(a) za": "ANO",
+				"narodený(á)": "9. 2. 1951",
 				"národnosť": "slovenská",
-				"bydlisko": "Nové Zámky",
-				"kraj": "Nitriansky",
-				"e-mail": "pavol_abrhan@nrsr.sk",
+				"bydlisko": "Bratislava",
+				"kraj": "Bratislavský",
+				"e-mail": "",
 				"www": "",
-				"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=226&ImageWidth=140",
+				"fotka": "",
 				"členstvo": [],
 			},
 		},
@@ -594,12 +594,12 @@ class ParseSession(unittest.TestCase):
 			"index": 0,
 			"expected":
 			{
-				"dátum": "02. 05. 2012 13:04:15", 
-				"číslo": "1", 
-				"názov": "Prezentácia.", 
-				"id": "30051", 
+				"dátum": "2.5.2012 13:04:15",
+				"číslo": "1",
+				"názov": "Prezentácia.",
+				"id": "30051",
 				"url": {
-					"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=30051", 
+					"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=30051",
 					"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=30051"
 				}
 			},
@@ -611,16 +611,16 @@ class ParseSession(unittest.TestCase):
 			"index": 5,
 			"expected":
 			{
-				"dátum": "19. 06. 2007 17:10:25", 
-				"číslo": "6", 
-				"názov": "Správa o činnosti verejného ochrancu práv (tlač 243). Hlasovanie o návrhu uznesenia.", 
+				"dátum": "19.6.2007 17:10:25",
+				"číslo": "6",
+				"názov": "Správa o činnosti verejného ochrancu práv (tlač 243). Hlasovanie o návrhu uznesenia.",
 				"id": "20995",
 				"url": {
-					"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=20995", 
+					"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=20995",
 					"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=20995"
 				}, 
 				"čpt": {
-					"url": "http://www.nrsr.sk/web/Default.aspx?sid=zakony/cpt&ZakZborID=13&CisObdobia=4&ID=243", 
+					"url": "http://www.nrsr.sk/web/Default.aspx?sid=zakony/cpt&ZakZborID=13&CisObdobia=4&ID=243",
 					"číslo": "243"
 				}
 			},
@@ -746,15 +746,15 @@ class ParseNewDebatesList(unittest.TestCase):
 				},
 				"video": {
 					"id": "106774",
-					"url": "http://mmserv2.nrsr.sk/NRSRInternet/Vystupenie/106774/video.html"
+					"url": "http://tv.nrsr.sk/NRSRInternet/index.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=106774"
 				},
 				"video_rokovania": {
 					"id": "724",
-					"url": "http://mmserv2.nrsr.sk/NRSRInternet/Rokovanie/724/"
+					"url": "http://tv.nrsr.sk/NRSRInternet/index.aspx?module=Internet&page=VideoArchiveDetail&MeetingID=724"
 				},
 				"prepis": {
 					"id": "106774",
-					"url": "http://mmserv2.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=106774&ViewType=content&"
+					"url": "http://tv.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=106774&ViewType=content&"
 				}
 			},
 		},
