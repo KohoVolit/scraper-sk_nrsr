@@ -91,6 +91,14 @@ def get_or_create(resource, item, key=None):
 	return resp['id'], True
 
 
+def get_chamber_id(term):
+	"""Return chamber id of the given term."""
+	resp = vpapi.get('organizations', where={
+		'classification': 'chamber',
+		'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk'}}})
+	return resp['_items'][0]['id'] if resp['_items'] else None
+
+
 class Person:
 	@staticmethod
 	def _guess_gender(name):
@@ -184,7 +192,7 @@ class Organization:
 			o.dissolution_date = parse.terms[term]['end_date']
 
 		o.name = '%s. Národná rada %s-%s' % (term, o.founding_date[:4], getattr(o, 'dissolution_date', '')[:4])
-		o.identifiers = [{'identifier': term, 'scheme': 'nrsr.sk/chamber'}]
+		o.identifiers = [{'identifier': term, 'scheme': 'nrsr.sk'}]
 
 		o.contact_details = [
 			{
@@ -219,7 +227,7 @@ class Organization:
 
 		o = Organization()
 		o.name = source['názov']
-		o.identifiers = [{'identifier': str(id), 'scheme': 'nrsr.sk/'+type}]
+		o.identifiers = [{'identifier': str(id), 'scheme': 'nrsr.sk'}]
 		o.classification = type
 
 		cds = []
@@ -246,7 +254,9 @@ class Organization:
 
 	def save(self):
 		scraped = self.__dict__
-		resp = vpapi.get('organizations', where={'identifiers': {'$elemMatch': self.identifiers[0]}})
+		resp = vpapi.get('organizations', where={
+			'classification': self.classification,
+			'identifiers': {'$elemMatch': self.identifiers[0]}})
 		if not resp['_items']:
 			resp = vpapi.post('organizations', scraped)
 		else:
@@ -267,9 +277,7 @@ class Membership:
 		If an MP referred by the membership does not exist, scrape and save him/her.
 		"""
 		change_list = parse.change_list(term)
-
-		chamber = vpapi.get('organizations', where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
-		oid = chamber['_items'][0]['id']
+		oid = get_chamber_id(term)
 
 		for change in reversed(change_list['_items']):
 			logging.info('Scraping mandate change of `%s` at %s' % (change['poslanec']['meno'], change['dátum']))
@@ -319,7 +327,9 @@ class Membership:
 
 		# if group is not scraped yet, scrape and save it
 		g = vpapi.get('organizations',
-			where={'identifiers': {'$elemMatch': {'identifier': id, 'scheme': 'nrsr.sk/'+group_type}}},
+			where={
+				'classification': group_type,
+				'identifiers': {'$elemMatch': {'identifier': id, 'scheme': 'nrsr.sk'}}},
 			projection={'id': 1})
 		if g['_items']:
 			oid = g['_items'][0]['id']
@@ -450,11 +460,7 @@ def scrape_people(term):
 	effective_date = date.today().isoformat() if term == parse.current_term() else parse.terms[term]['end_date']
 
 	# get or make chamber
-	chamber = vpapi.get('organizations', where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
-	if chamber['_items']:
-		chamber_id = chamber['_items'][0]['id']
-	else:
-		chamber_id = Organization.make_chamber(term).save()
+	chamber_id = get_chamber_id(term) or Organization.make_chamber(term).save()
 
 	# scrape MPs
 	mps = parse.mp_list(term)
@@ -482,13 +488,6 @@ def scrape_people(term):
 		logging.info('Scraped %s %s' % (len(groups['_items']), type + ('es' if type == 'caucus' else 's')))
 
 
-def get_chamber_id(term):
-	"""Return chamber id of the given term."""
-	resp = vpapi.get('organizations',
-		where={'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk/chamber'}}})
-	return resp['_items'][0]['id']
-
-
 def scrape_motions(term):
 	"""Scrape and save motions from the given term that are not scraped
 	yet starting from the oldest ones. One Motion item, one VoteEvent
@@ -502,36 +501,36 @@ def scrape_motions(term):
 	# prepare mappings from source identifier to id for MPs and caucuses
 	chamber_id = get_chamber_id(term)
 	gen = get_all_items('people', projection={'identifiers': 1})
-	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in gen}
+	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in gen if 'identifiers' in mp}
 	gen = get_all_items('organizations', where={'classification': 'caucus', 'parent_id': chamber_id})
 	caucuses = {c['name']: c['id'] for c in gen}
 
 	# prepare list of sessions that are not completely scraped yet
 	sessions_to_scrape = []
 	session_list = parse.session_list(term)
-	for s in session_list['_items']:
-		session = parse.session(s['číslo'], term)
-		if len(session) == 0: continue
-		last_motion_id = session[-1]['id']
+	for session in session_list['_items']:
+		motions = parse.session(session['číslo'], term)
+		if len(motions) == 0: continue
+		last_motion_id = motions[-1]['id']
 		m = vpapi.get('motions',
 			where={'sources.url': 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % last_motion_id})
 		if m['_items']: break
-		sessions_to_scrape.append((s['názov'], session))
+		sessions_to_scrape.append((session, motions))
 
 	# scrape motions from those sessions
 	scraped_motions_count = 0
-	for session_name, session in reversed(sessions_to_scrape):
-		logging.info('Scraping session `%s`' % session_name)
+	for s, motions in reversed(sessions_to_scrape):
+		logging.info('Scraping session `%s`' % s['názov'])
 
-		# insert the session unless it already exists
+		# insert the session event unless it already exists
 		session = {
-			'name': session['názov'],
-			'identifier': session['číslo'],
+			'name': s['názov'],
+			'identifier': s['číslo'],
 			'organization_id': chamber_id,
 			'type': 'session',
 		}
 		try:
-			session['start_date'] = sk_to_iso(session['trvanie'])
+			session['start_date'] = sk_to_iso(s['trvanie'])
 			session['end_date'] = session['start_date']
 		except ValueError:
 			# multiday session contains votes; dates will be set by debates scraping
@@ -539,22 +538,25 @@ def scrape_motions(term):
 		key = ('organization_id', 'type', 'identifier')
 		session_id, _ = get_or_create('events', session, key)
 
-		for i, m in enumerate(session):
+		for i, m in enumerate(motions):
 			# check if the motion is already present
 			m_id = re.search(r'ID=(\d+)', m['url']['výsledok']).group(1)
+			# we not use directly m['url']['kluby'] because it is not always present
 			m_url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % m_id
 			resp = vpapi.get('motions', where={'sources.url': m_url})
 			if resp['_items']: continue
 
 			try:
-				motion_id, vote_event_id = None, None
+				motion_id = None
+				vote_event_id = None
 
 				# insert motion
-				logging.info('Scraping motion %s of %s (voted at %s)' % (i+1, len(session), m['dátum']))
+				logging.info('Scraping motion %s of %s (voted at %s)' % (i+1, len(motions), m['dátum']))
 				parsed_motion = parse.motion(m['id'])
 				motion = {
 					'organization_id': chamber_id,
 					'legislative_session_id': session_id,
+					'identifier': parsed_motion['číslo'],
 					'text': parsed_motion['názov'],
 					'date': sk_to_iso(m['dátum']),
 					'sources': [{
@@ -569,10 +571,10 @@ def scrape_motions(term):
 
 				# insert vote event
 				vote_event = {
-					'identifier': parsed_motion['číslo'],
 					'motion_id': motion_id,
 					'organization_id': chamber_id,
 					'legislative_session_id': session_id,
+					'identifier': parsed_motion['číslo'],
 					'start_date': motion['date'],
 					'sources': [{
 						'url': parsed_motion['url'],
@@ -791,7 +793,7 @@ def scrape_old_debates(term):
 					new_session_identifier = hd.group(3)
 
 				if new_session_name != session_name:
-					# create new session
+					# create new session event
 					session = {
 						'name': new_session_name,
 						'identifier': new_session_identifier,
@@ -806,7 +808,7 @@ def scrape_old_debates(term):
 					session_end_date = date
 					sitting_count = 0
 
-				# create new sitting
+				# create new sitting event
 				sitting_count += 1
 				sitting = {
 					'name': '%s. deň rokovania, %s' % (sitting_count, sk_date),
@@ -985,6 +987,7 @@ def scrape_new_debates(term):
 
 	speech_count = 0
 	session_name = ''
+	speeches = []
 	for dp in debate_parts:
 		if 'prepis' not in dp: continue
 
@@ -1007,7 +1010,7 @@ def scrape_new_debates(term):
 			continue
 
 		if not session_name.startswith('%s. ' % dp['schôdza']):
-			# create new session
+			# create new session event
 			session_name = '%s. schôdza' % dp['schôdza']
 			session = {
 				'name': session_name,
@@ -1023,7 +1026,7 @@ def scrape_new_debates(term):
 			sitting_name = ''
 
 		if not sitting_name.startswith('%s. ' % new_sitting.group(1)):
-			# create new sitting
+			# create new sitting event
 			sitting_name = '%s. deň rokovania, %s' % (new_sitting.group(1), dp['dátum'])
 			sitting = {
 				'name': sitting_name,
