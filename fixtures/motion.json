@@ -1,0 +1,59 @@
+[
+	{
+		"id": "33841",
+		"mp_index": 1,
+		"expected":
+		{
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=33841",
+			"názov": "Hlasovanie o pozmeňujúcich a doplňujúcich návrhoch k programu 35. schôdze Národnej rady Slovenskej republiky. Návrh posl. Kollára.",
+			"číslo": "7",
+			"schôdza": {
+				"číslo": "35",
+				"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/vyhladavanie_vysledok&ZakZborID=13&CisObdobia=6&CisSchodze=35&ShowCisloSchodze=False",
+				"obdobie": "6"
+			},
+			"dátum": "13. 5. 2014 13:19",
+			"výsledok": "Návrh neprešiel",
+			"súčty": {
+				"prítomní": "141",
+				"hlasujúcich": "138",
+				"[z] za": "37",
+				"[p] proti": "77",
+				"[?] zdržalo sa": "24",
+				"[n] nehlasovalo": "3",
+				"[0] neprítomní": "9"
+			},
+			"hlasy": [
+				{
+					"meno": "Ján Babič",
+					"id": "735",
+					"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=735&CisObdobia=6",
+					"klub": "Klub SMER – SD",
+					"hlas": "p"
+				}
+			]
+		}
+	},
+	{
+		"id": "30297",
+		"mp_index": null,
+		"expected":
+		{
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=30297",
+			"názov": "Návrh na voľbu predsedu a člena Osobitného kontrolného výboru Národnej rady Slovenskej republiky na kontrolu činnosti Slovenskej informačnej služby (tlač 109).",
+			"číslo": "0",
+			"schôdza": {
+				"číslo": "3",
+				"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/vyhladavanie_vysledok&ZakZborID=13&CisObdobia=6&CisSchodze=3&ShowCisloSchodze=False",
+				"obdobie": "6"
+			},
+			"dátum": "19. 6. 2012 17:30",
+			"dokumenty": [
+				{
+					"názov": "Zápisnica o výsledku tajného hlasovania",
+					"url": "http://www.nrsr.sk/web//web/Dynamic/Download.aspx?DocID=368031"
+				}
+			]
+		}
+	}
+]

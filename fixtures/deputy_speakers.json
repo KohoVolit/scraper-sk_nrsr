@@ -1,0 +1,15 @@
+[
+	{
+		"index": 1,
+		"expected":
+		{
+			"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=297&ImageWidth=130",
+			"meno": "JUDr. Zmajkovičová Renáta",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=297",
+			"id": "297",
+			"kandidoval(a) za": "SMER – sociálna demokracia",
+			"narodený(á):": "09. 05. 1962",
+			"národnosť": "slovenská"
+		}
+	}
+]

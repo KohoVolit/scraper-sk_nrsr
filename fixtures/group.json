@@ -1,0 +1,200 @@
+[
+	{
+		"type": "committee",
+		"id": "116",
+		"expected":
+		{
+			"id": "116",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=vybory/vybor&ID=116",
+			"názov": "Výbor NR SR pre nezlučiteľnosť funkcií",
+			"podnadpis": "Základné informácie o výbore",
+			"opis": "<div align=\"justify\">Výbor NR SR pre nezlučiteľnos",
+			"tel": "5972 1490",
+			"fax": "5441 5468",
+			"email": "vnf@nrsr.sk",
+			"ďalšie dokumenty": "http://www.nrsr.sk/dl/Browser/Committee?committeeExternalId=116",
+			"členovia": [
+				{
+					"id": "326",
+					"meno": "Novotný, Viliam",
+					"klub": null,
+					"obdobia": [
+						{
+							"rola": "predseda"
+						}
+					],
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=326&ImageWidth=44"
+				}
+			]
+		}
+	},
+	{
+		"type": "caucus",
+		"id": "41",
+		"expected":
+		{
+			"id": "41",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/kluby/klub&ID=41",
+			"názov": "Klub SMER – SD",
+			"tel": "02/5972 - 1395",
+			"fax": "02/5441 - 4255, 02/5441 - 3708",
+			"email": "klubsmer@nrsr.sk",
+			"členovia": [
+				{
+					"id": "278",
+					"meno": "Laššáková, Jana",
+					"obdobia": [
+						{
+							"rola": "predsedníčka"
+						}
+					],
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=278&ImageWidth=44"
+				}
+			]
+		}
+	},
+	{
+		"type": "delegation",
+		"id": "35",
+		"expected":
+		{
+			"id": "35",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/delegacie/delegacia&ID=35",
+			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy",
+			"opis": "<div align=\"justify\">\r\n<p>\u00a0</p>\r\n<p>Rada Európy je",
+			"členovia": [
+				{
+					"id": "679",
+					"meno": "Nachtmannová Oľga",
+					"klub": "Klub SMER – SD",
+					"obdobia": [
+						{
+							"rola": "vedúca"
+						}
+					],
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=679&ImageWidth=44"
+				}
+			]
+		}
+	},
+	{
+		"type": "friendship group",
+		"id": "73",
+		"expected":
+		{
+			"id": "73",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/sp/sp&SkupinaId=73",
+			"názov": "Skupina priateľstva s Českou republikou",
+			"kontakt": "Jarmila Nováková, Odbor zahraničných vzťahov a agendy EÚ Kancelárie Národnej rady Slovenskej republiky",
+			"tel": "+421 59 72 25 12",
+			"fax": "+421 54 41 53 24",
+			"email": "jarmila.novakova@nrsr.sk",
+			"členovia": [
+				{
+					"id": "721",
+					"meno": "Jasaň, Viliam",
+					"klub": "Klub SMER – SD",
+					"obdobia": [
+						{
+							"rola": "predseda"
+						}
+					],
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=721&ImageWidth=44"
+				}
+			]
+		}
+	},
+	{
+		"type": "committee",
+		"id": "75",
+		"expected":
+		{
+			"id": "75",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=vybory/vybor&ID=75",
+			"názov": "Výbor NR SR pre nezlučiteľnosť funkcií",
+			"členovia": [
+				{
+					"id": "645",
+					"meno": "Belásová Milada",
+					"obdobia": [
+						{
+							"rola": "členka",
+							"od": "4. 7. 2006",
+							"do": "12. 6. 2010"
+						}
+					]
+				}
+			]
+		}
+	},
+	{
+		"type": "caucus",
+		"id": "28",
+		"expected":
+		{
+			"id": "28",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/kluby/klub&ID=28",
+			"názov": "Klub SDKÚ – DS",
+			"podnadpis": "NR SR vzala na vedomie utvorenie Klubu SDKÚ Uznesením NR SR č. 11.",
+			"členovia": [
+				{
+					"id": "647",
+					"meno": "Cibulková, Katarína",
+					"obdobia": [
+						{
+							"rola": "členka",
+							"od": "4. 7. 2006",
+							"do": "12. 6. 2010"
+						}
+					]
+				}
+			]
+		}
+	},
+	{
+		"type": "delegation",
+		"id": "19",
+		"expected":
+		{
+			"id": "19",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/delegacie/delegacia&ID=19",
+			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy",
+			"členovia": [
+				{
+					"id": "228",
+					"meno": "Angyalová Edita",
+					"obdobia": [
+						{
+							"rola": "členka",
+							"od": "7. 9. 2006",
+							"do": "30. 4. 2007"
+						}
+					]
+				}
+			]
+		}
+	},
+	{
+		"type": "friendship group",
+		"id": "27",
+		"expected":
+		{
+			"id": "27",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/sp/sp&SkupinaId=27",
+			"názov": "Skupina priateľstva s Českou republikou",
+			"členovia": [
+				{
+					"id": "226",
+					"meno": "Abrhan, Pavol",
+					"obdobia": [
+						{
+							"rola": "Člen",
+							"od": "4. 7. 2006",
+							"do": "12. 6. 2010"
+						}
+					]
+				}
+			]
+		}
+	}
+]

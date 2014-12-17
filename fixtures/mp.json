@@ -1,0 +1,51 @@
+[
+	{
+		"id": "773",
+		"term": "6",
+		"memb_index": 1,
+		"expected":
+		{
+			"id": "773",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=773&CisObdobia=6",
+			"meno": "Jozef",
+			"priezvisko": "Viskupič",
+			"titul": "Mgr.",
+			"kandidoval(a) za": "OĽaNO",
+			"narodený(á)": "8. 2. 1976",
+			"národnosť": "slovenská",
+			"bydlisko": "Trnava",
+			"kraj": "Trnavský",
+			"e-mail": "jozef_viskupic@nrsr.sk",
+			"www": "www.jozefviskupic.sk",
+			"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=773&ImageWidth=140",
+			"členstvo": [
+				{
+					"meno": "Výbor NR SR pre európske záležitosti",
+					"rola": "overovateľ"
+				}
+			]
+		}
+	},
+	{
+		"id": "295",
+		"term": "3",
+		"memb_index": null,
+		"expected":
+		{
+			"id": "295",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=295&CisObdobia=3",
+			"meno": "Rudolf",
+			"priezvisko": "Zajac",
+			"titul": "MUDr.",
+			"kandidoval(a) za": "ANO",
+			"narodený(á)": "9. 2. 1951",
+			"národnosť": "slovenská",
+			"bydlisko": "Bratislava",
+			"kraj": "Bratislavský",
+			"e-mail": "",
+			"www": "",
+			"fotka": "",
+			"členstvo": []
+		}
+	}
+]

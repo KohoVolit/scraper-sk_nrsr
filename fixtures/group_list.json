@@ -1,0 +1,87 @@
+[
+	{
+		"type": "committee",
+		"term": null,
+		"index": 0,
+		"expected":
+		{
+			"id": "115",
+			"názov": "Mandátový a imunitný výbor NR SR"
+		}
+	},
+	{
+		"type": "caucus",
+		"term": null,
+		"index": 0,
+		"expected":
+		{
+			"id": "41",
+			"názov": "Klub SMER – SD",
+			"od": "4. 4. 2012",
+			"do": "..."
+		}
+	},
+	{
+		"type": "delegation",
+		"term": null,
+		"index": 0,
+		"expected":
+		{
+			"id": "35",
+			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy"
+		}
+	},
+	{
+		"type": "friendship group",
+		"term": null,
+		"index": 0,
+		"expected":
+		{
+			"id": "73",
+			"názov": "Skupina priateľstva s Českou republikou"
+		}
+	},
+	{
+		"type": "committee",
+		"term": "4",
+		"index": 0,
+		"expected":
+		{
+			"id": "74",
+			"názov": "Mandátový a imunitný výbor NR SR"
+		}
+	},
+	{
+		"type": "caucus",
+		"term": "4",
+		"index": 1,
+		"expected":
+		{
+			"id": "28",
+			"názov": "Klub SDKÚ – DS",
+			"od": "4. 7. 2006",
+			"do": "12. 6. 2010",
+			"poznámka": "NR SR vzala na vedomie utvorenie Klubu SDKÚ Uznesením NR SR č. 11."
+		}
+	},
+	{
+		"type": "delegation",
+		"term": "4",
+		"index": 0,
+		"expected":
+		{
+			"id": "19",
+			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy"
+		}
+	},
+	{
+		"type": "friendship group",
+		"term": "4",
+		"index": 0,
+		"expected":
+		{
+			"id": "25",
+			"názov": "Skupina priateľstva s Albánskom, Bosnou a Hercegovinou, Bulharskom, Chorvátskom, Srbskom a Čiernou horou, Macedónskom a Rumunskom"
+		}
+	}
+]

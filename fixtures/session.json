@@ -1,0 +1,38 @@
+[
+	{
+		"term": null,
+		"session_number": "2",
+		"index": 0,
+		"expected":
+		{
+			"dátum": "2.5.2012 13:04:15",
+			"číslo": "1",
+			"názov": "Prezentácia.",
+			"id": "30051",
+			"url": {
+				"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=30051",
+				"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=30051"
+			}
+		}
+	},
+	{
+		"term": "4",
+		"session_number": "11",
+		"index": 5,
+		"expected":
+		{
+			"dátum": "19.6.2007 17:10:25",
+			"číslo": "6",
+			"názov": "Správa o činnosti verejného ochrancu práv (tlač 243). Hlasovanie o návrhu uznesenia.",
+			"id": "20995",
+			"url": {
+				"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=20995",
+				"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=20995"
+			},
+			"čpt": {
+				"url": "http://www.nrsr.sk/web/Default.aspx?sid=zakony/cpt&ZakZborID=13&CisObdobia=4&ID=243",
+				"číslo": "243"
+			}
+		}
+	}
+]

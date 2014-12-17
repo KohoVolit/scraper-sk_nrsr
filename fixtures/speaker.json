@@ -1,0 +1,12 @@
+[
+	{
+		"expected":
+		{
+			"url": "http://www.nrsr.sk/web/default.aspx?sid=predseda",
+			"meno": "Mgr. Pavol Paška",
+			"fotka": "http://www.nrsr.sk/web/img/Paska_Pavol-w-207x266.jpg",
+			"narodený": "23. 2. 1958 v Košiciach",
+			"životopis": "<table>\r\n\r\n<tr>\r\n<td> </td>\r\n<td width=\"1%\"> </td>"
+		}
+	}
+]

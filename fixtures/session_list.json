@@ -1,0 +1,24 @@
+[
+	{
+		"term": null,
+		"index": -2,
+		"expected":
+		{
+			"číslo": "2",
+			"názov": "2. schôdza",
+			"trvanie": "2. - 16. 5. 2012",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/vyhladavanie_vysledok&ZakZborID=13&CisObdobia=6&CisSchodze=2&ShowCisloSchodze=False"
+		}
+	},
+	{
+		"term": "4",
+		"index": 1,
+		"expected":
+		{
+			"číslo": "52",
+			"názov": "52. schôdza",
+			"trvanie": "25. - 26. 5. 2010",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/vyhladavanie_vysledok&ZakZborID=13&CisObdobia=4&CisSchodze=52&ShowCisloSchodze=False"
+		}
+	}
+]

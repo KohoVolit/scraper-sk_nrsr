@@ -1,0 +1,36 @@
+[
+	{
+		"term": "6",
+		"since_date": "2013-07-02",
+		"until_date": "2013-07-02",
+		"index": 1,
+		"expected":
+		{
+			"schôdza": "21",
+			"dátum": "2. 7. 2013",
+			"trvanie": {
+				"do": "9:16:59",
+				"od": "9:04:58"
+			},
+			"druh": "Uvádzajúci uvádza bod",
+			"osoba": {
+				"id": "326",
+				"url": "http://www.nrsr.sk/Default.aspx?sid=poslanci/poslanec&PoslanecID=326&CisObdobia=6",
+				"meno": "Novotný, Viliam",
+				"funkcia": "poslanec NR SR"
+			},
+			"video": {
+				"id": "106774",
+				"url": "http://tv.nrsr.sk/NRSRInternet/index.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=106774"
+			},
+			"video_rokovania": {
+				"id": "724",
+				"url": "http://tv.nrsr.sk/NRSRInternet/index.aspx?module=Internet&page=VideoArchiveDetail&MeetingID=724"
+			},
+			"prepis": {
+				"id": "106774",
+				"url": "http://tv.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=106774&ViewType=content&"
+			}
+		}
+	}
+]
