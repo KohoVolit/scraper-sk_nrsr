@@ -47,7 +47,7 @@ def sk_to_utc(dt_str):
 	if match:
 		month = match.group(0)
 		dt_str = dt_str.replace(month, SK_MONTHS[month[:3].lower()] + '.')
-	dt = dateutil.parser.parse(dt_str)
+	dt = dateutil.parser.parse(dt_str, dayfirst=True)
 	dt = LOCAL_TIMEZONE.localize(dt)
 	dt = dt.astimezone(pytz.utc)
 	format = '%Y-%m-%dT%H:%M:%S' if ':' in dt_str else '%Y-%m-%d'
