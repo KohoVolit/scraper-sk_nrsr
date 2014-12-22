@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
 import re
-from datetime import date, datetime, timedelta
 import os.path
 import argparse
 import logging
 import unittest
 import sys
 import io
-import lxml.html
 import json
+from datetime import date, datetime, timedelta
+
+import lxml.html
 import pytz
+import dateutil.parser
 
 import vpapi
 import parse
@@ -19,49 +21,44 @@ import test
 
 LOGS_PATH = 'logs'
 scrapeutils.USE_WEBCACHE = True
-timezone = pytz.timezone('Europe/Bratislava')
+LOCAL_TIMEZONE = pytz.timezone('Europe/Bratislava')
 
 SK_MONTHS = {
-	'január': 1, 'januára': 1,
-	'február': 2, 'februára': 2,
-	'marec': 3 , 'marca': 3,
-	'apríl': 4, 'apríla': 4,
-	'máj': 5, 'mája': 5,
-	'jún': 6, 'júna': 6,
-	'júl': 7, 'júla': 7,
-	'august': 8, 'augusta': 8,
-	'september': 9, 'septembra': 9,
-	'október': 10, 'októbra': 10,
-	'november': 11, 'novembra': 11,
-	'december': 12, 'decembra': 12
+	'jan': 1,
+	'feb': 2,
+	'mar': 3,
+	'apr': 4,
+	'máj': 5,
+	'jún': 6,
+	'júl': 7,
+	'aug': 8,
+	'sep': 9,
+	'okt': 10,
+	'nov': 11,
+	'dec': 12,
 }
+SK_MONTHS_REGEX = \
+	'januára?|februára?|mar(ec|ca)|apríla?|mája?|júna?|' + \
+	'júla?|augusta?|septemb(er|ra)|októb(er|ra)|novemb(er|ra)|decemb(er|ra)'
 
-def sk_to_iso(datestring):
-	"""Converts date(-time) string in SK format (d. m. YYYY or
-	d. month YYYY) to ISO format (YYYY-mm-dd). If time if present too,
-	the result is YYYY-mm-ddTHH:MM:SS+ZZZZ using the global timezone.
-	"""
-	sk_months_pattern = r'\b|'.join(SK_MONTHS.keys()) + r'\b'
-	m = re.search(sk_months_pattern, datestring)
-	if m:
-		month = m.group(0)
-		datestring = datestring.replace(month, '%s.' % SK_MONTHS[month])
-	datestring = datestring.replace('. ', '.')
-	try:
-		return datetime.strptime(datestring, '%d.%m.%Y').date().isoformat()
-	except ValueError:
-		try:
-			dt = datetime.strptime(datestring, '%d.%m.%Y %H:%M:%S')
-		except ValueError:
-			dt = datetime.strptime(datestring, '%d.%m.%Y %H:%M')
-		return timezone.localize(dt).strftime('%Y-%m-%dT%H:%M:%S%z')
+def sk_to_utc(dt_str):
+	"""Converts Slovak date(-time) string into ISO format in UTC time."""
+	match = re.search(SK_MONTHS_REGEX, dt_str, re.IGNORECASE)
+	if match:
+		month = match.group(0)
+		dt_str = dt_str.replace(month, SK_MONTHS[month[:3].lower()] + '.')
+	dt = dateutil.parser.parse(dt_str)
+	dt = LOCAL_TIMEZONE.localize(dt)
+	dt = dt.astimezone(pytz.utc)
+	format = '%Y-%m-%dT%H:%M:%S' if ':' in dt_str else '%Y-%m-%d'
+	return dt.strftime(format)
 
 
-def datestring_add(datestring, days):
+def datestring_add(date_str, days):
 	"""Returns the date specified as string in ISO format with given
 	number of days added.
 	"""
-	return (datetime.strptime(datestring, '%Y-%m-%d') + timedelta(days=days)).date().isoformat()
+	return (datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=days)).date().isoformat()
 
 
 def get_all_items(resource, **kwargs):
@@ -136,7 +133,7 @@ class Person:
 		p.gender = Person._guess_gender(p.name)
 
 		if source[r'narodený(á)']:
-			p.birth_date = sk_to_iso(source[r'narodený(á)'])
+			p.birth_date = sk_to_utc(source[r'narodený(á)'])
 
 		if source['fotka']:
 			p.image = source['fotka']
@@ -248,9 +245,9 @@ class Organization:
 
 	def set_dates(self, group):
 		if group.get('od', '') not in ('', '...', '1. 1. 0001'):
-			self.founding_date = sk_to_iso(group['od'])
+			self.founding_date = sk_to_utc(group['od'])
 		if group.get('do', '') not in ('', '...', '1. 1. 0001'):
-			self.dissolution_date = sk_to_iso(group['do'])
+			self.dissolution_date = sk_to_utc(group['do'])
 
 	def save(self):
 		scraped = self.__dict__
@@ -304,10 +301,10 @@ class Membership:
 			}]
 
 			if change['zmena'] in ('Mandát vykonávaný (aktívny poslanec)', 'Mandát náhradníka vykonávaný'):
-				m.start_date = sk_to_iso(change['dátum'])
+				m.start_date = sk_to_utc(change['dátum'])
 				m.save()
 			elif change['zmena'] in ('Mandát zaniknutý', 'Mandát sa neuplatňuje', 'Mandát náhradníka zaniknutý'):
-				m.end_date = sk_to_iso(change['dátum'])
+				m.end_date = sk_to_utc(change['dátum'])
 				# only close an existing membership (counterexample: Érsek, Árpád, 27. 9. 2010 - 10. 3. 2012)
 				m.save(False)
 			elif change['zmena'] in ('Mandát nadobudnutý vo voľbách', 'Mandát náhradníka získaný'):
@@ -384,9 +381,9 @@ class Membership:
 				else:
 					m.label = 'V skupine ' + group['názov']
 				if period.get('od'):
-					m.start_date = sk_to_iso(period.get('od'))
+					m.start_date = sk_to_utc(period.get('od'))
 				if period.get('do'):
-					m.end_date = sk_to_iso(period.get('do'))
+					m.end_date = sk_to_utc(period.get('do'))
 				m.save()
 				for attr in ('role', 'start_date', 'end_date'):
 					if hasattr(m, attr):
@@ -395,7 +392,7 @@ class Membership:
 
 		# close all open memberships in this group that were not updated
 		logging.info('Closing not updated open memberships')
-		present = datetime.now() - timedelta(minutes=10)
+		present = datetime.utcnow() - timedelta(minutes=10)
 		query = {
 			'organization_id': oid,
 			'$or': [{'end_date': {'$exists': False}}, {'end_date': {'$in': [None, '']}}],
@@ -530,7 +527,7 @@ def scrape_motions(term):
 			'type': 'session',
 		}
 		try:
-			session['start_date'] = sk_to_iso(s['trvanie'])
+			session['start_date'] = sk_to_utc(s['trvanie'])
 			session['end_date'] = session['start_date']
 		except ValueError:
 			# multiday session contains votes; dates will be set by debates scraping
@@ -558,7 +555,7 @@ def scrape_motions(term):
 					'legislative_session_id': session_id,
 					'identifier': parsed_motion['číslo'],
 					'text': parsed_motion['názov'],
-					'date': sk_to_iso(m['dátum']),
+					'date': sk_to_utc(m['dátum']),
 					'sources': [{
 						'url': parsed_motion['url'],
 						'note': 'Hlasovanie na webe NRSR'
@@ -782,7 +779,7 @@ def scrape_old_debates(term):
 				insert_speech('speech')
 
 				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
-				date = sk_to_iso(sk_date + ' 00:00:00')
+				date = sk_to_utc(sk_date + ' 00:00:00')
 				if hd.group(1).startswith('sláv'):
 					new_session_name = 'Mimoriadna schôdza'
 					sl = parse.session_list(term)
@@ -883,7 +880,7 @@ def scrape_old_debates(term):
 			ds = re.match(r'^\s*(\d+\.\s\w+\s\d{4})(.*hodine)?\s*$', par)
 			if ds:
 				try:
-					date = sk_to_iso(ds.group(1).strip())
+					date = sk_to_utc(ds.group(1).strip())
 					continue
 				except ValueError:
 					pass
@@ -999,8 +996,8 @@ def scrape_new_debates(term):
 			(dp['dátum'], dp['trvanie']['od'], dp['trvanie']['do'], dp['prepis']['id']))
 		dpart = parse.debate_of_terms56(dp['prepis']['id'])
 
-		start_datetime = sk_to_iso('%s %s' % (dp['dátum'], dp['trvanie']['od']))
-		end_datetime = sk_to_iso('%s %s' % (dp['dátum'], dp['trvanie']['do']))
+		start_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['od']))
+		end_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['do']))
 		dpart_kind = dp['druh']
 		dpart_url = dp['prepis']['url']
 		dpart_video = dp['video']['url']
@@ -1170,7 +1167,7 @@ def main():
 	# set-up logging to a local file
 	if not os.path.exists(LOGS_PATH):
 		os.makedirs(LOGS_PATH)
-	logname = datetime.now().strftime('%Y-%m-%d-%H%M%S') + '.log'
+	logname = datetime.utcnow().strftime('%Y-%m-%d-%H%M%S') + '.log'
 	logname = os.path.join(LOGS_PATH, logname)
 	logname = os.path.abspath(logname)
 	logging.basicConfig(level=logging.DEBUG, format='%(message)s', handlers=[logging.FileHandler(logname, 'w', 'utf-8')])
