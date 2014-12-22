@@ -19,7 +19,7 @@ import parse
 import scrapeutils
 import test
 
-LOGS_PATH = 'logs'
+LOGS_PATH = '/var/log/scrapers/sk/nrsr'
 scrapeutils.USE_WEBCACHE = True
 LOCAL_TIMEZONE = pytz.timezone('Europe/Bratislava')
 
