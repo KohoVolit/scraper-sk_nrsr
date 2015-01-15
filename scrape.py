@@ -1211,22 +1211,6 @@ def main():
 				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun for the recently finished term once more.' % term)
 			scrape_people(term)
 
-		if args.votes == 'initial':
-			# initial scrape of votes from all terms
-			logging.info('Initial scrape - deleting votes, vote-events and motions')
-			vpapi.delete('votes')
-			vpapi.delete('vote-events')
-			vpapi.delete('motions')
-			for term in sorted(parse.terms.keys()):
-				scrape_motions(term)
-
-		elif args.votes == 'recent':
-			# incremental scrape of votes since the last scrape
-			term = args.term or parse.current_term()
-			if term not in parse.terms:
-				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun once more.' % term)
-			scrape_motions(term)
-
 		terms_with_old_debates = ('1', '2', '3', '4')
 		if args.debates == 'initial':
 			# initial scrape of debates from all terms
@@ -1249,6 +1233,22 @@ def main():
 				scrape_old_debates(term)
 			else:
 				scrape_new_debates(term)
+
+		if args.votes == 'initial':
+			# initial scrape of votes from all terms
+			logging.info('Initial scrape - deleting votes, vote-events and motions')
+			vpapi.delete('votes')
+			vpapi.delete('vote-events')
+			vpapi.delete('motions')
+			for term in sorted(parse.terms.keys()):
+				scrape_motions(term)
+
+		elif args.votes == 'recent':
+			# incremental scrape of votes since the last scrape
+			term = args.term or parse.current_term()
+			if term not in parse.terms:
+				raise Exception('Unknown term `%s`. Scrape canceled. Add it to the terms list in parse.py an rerun once more.' % term)
+			scrape_motions(term)
 
 		status = 'finished'
 		logging.info('Finished')
