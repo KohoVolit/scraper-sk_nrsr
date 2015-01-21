@@ -40,27 +40,26 @@ Get the scraper:
 
   .. code-block:: console
 
-      $ mkdir --p /home/projects/scrapers
+      $ sudo mkdir --p /home/projects/scrapers
       $ cd /home/projects/scrapers
-      $ git clone https://github.com/KohoVolit/sk_nrsr_scraper.git
-      $ mv sk_nrsr_scraper sk_nrsr
+      $ sudo git clone https://github.com/KohoVolit/sk_nrsr_scraper.git sk_nrsr
 
 Get VPAPI client and SSH certificate of the server:
 
   .. code-block:: console
 
       $ cd sk_nrsr
-      $ wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/vpapi.py
-      $ wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/server_cert_prod.pem
+      $ sudo wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/vpapi.py
+      $ sudo wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/server_cert_prod.pem
 
 Create a virtual environment for the scraper and install the required packages into it:
 
   .. code-block:: console
 
-      $ virtualenv /home/projects/.virtualenvs/scrapers/sk_nrsr --no-site-packages
-      $ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
-      $ pip install -r requirements.txt
-      $ deactivate
+      $ sudo virtualenv /home/projects/.virtualenvs/scrapers/sk_nrsr --no-site-packages
+      (sk_nrsr)$ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
+      (sk_nrsr)$ sudo pip install -r requirements.txt
+      (sk_nrsr)$ deactivate
 
 
 Configuration

@@ -1,3 +1,9 @@
+webcache/
+oldcache/
+vpapi.py
+server_cert.pem
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -51,4 +57,3 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-
