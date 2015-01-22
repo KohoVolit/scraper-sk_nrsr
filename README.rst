@@ -5,7 +5,7 @@ sk_nrsr_scraper
 Scraper of Slovak National Council for `Visegrad+ project`_. Scrapes MPs, their memberships, votes and debates and stores the data into `Visegrad+ parliament API`_.
 
 .. _`Visegrad+ project`: http://www.parldata.eu
-.. _`Visegrad+ parliament API`: https://github.com/KohoVolit/visegrad-parliament-api
+.. _`Visegrad+ parliament API`: https://github.com/KohoVolit/api.parldata.eu
 
 .. contents:: :backlinks: none
 
@@ -49,8 +49,8 @@ Get VPAPI client and SSH certificate of the server:
   .. code-block:: console
 
       $ cd sk_nrsr
-      $ sudo wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/vpapi.py
-      $ sudo wget https://raw.githubusercontent.com/KohoVolit/visegrad-parliament-api/master/client/server_cert_prod.pem
+      $ sudo wget https://raw.githubusercontent.com/KohoVolit/api.parldata.eu/master/client/vpapi.py
+      $ sudo wget https://raw.githubusercontent.com/KohoVolit/api.parldata.eu/master/client/server_cert_prod.pem
 
 Create a virtual environment for the scraper and install the required packages into it:
 
@@ -67,11 +67,7 @@ Configuration
 
 Check that ``SERVER_NAME`` and ``SERVER_CERT`` variables in ``vpapi.py`` have correct values.
 
-Create environment variable with name ``VPAPI_PWD_SK_NRSR`` that contains the password for write access through API:
-
-  .. code-block:: console
-
-      $ export VPAPI_PWD_SK_NRSR=type-password-here
+Copy file ``conf/private-example.json`` to ``conf/private.json`` and fill in your username and password for write access through API. Those sensitive data *must not* be present in the repository.
 
 
 Running

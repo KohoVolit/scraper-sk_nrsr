@@ -2,6 +2,7 @@ webcache/
 oldcache/
 vpapi.py
 server_cert.pem
+conf/private.json
 
 
 # Byte-compiled / optimized / DLL files

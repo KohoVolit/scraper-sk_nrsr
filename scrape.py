@@ -19,7 +19,10 @@ import parse
 import scrapeutils
 import test
 
-LOGS_PATH = '/var/log/scrapers/sk/nrsr'
+BASE_DIR = os.path.dirname(__file__)
+CONF_DIR = os.path.join(BASE_DIR, 'conf')
+LOGS_DIR = '/var/log/scrapers/sk/nrsr'
+
 scrapeutils.USE_WEBCACHE = True
 LOCAL_TIMEZONE = pytz.timezone('Europe/Bratislava')
 
@@ -685,7 +688,7 @@ def scrape_old_debates(term):
 		mps[name] = mp['id']
 
 	# load name corrections
-	with open('name_corrections.json', 'r') as f:
+	with open(os.path.join(CONF_DIR, 'name_corrections.json'), encoding='utf8') as f:
 		name_corrections = json.load(f)
 
 	# scrape list of debates
@@ -861,7 +864,7 @@ def scrape_old_debates(term):
 
 				# create unknown speakers
 				if not speaker_id:
-					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, attribution))
+					logging.warn('Speaker `%s, %s` not found, creating new Person' % (name, attribution))
 					name_parts = re.match(r'(\w)\. ((\w)\. )?(\w+)', name)
 					person = {
 						'name': name,
@@ -970,7 +973,7 @@ def scrape_new_debates(term):
 	mps = {mp['name']: mp['id'] for mp in gen}
 
 	# load name corrections
-	with open('name_corrections.json', 'r') as f:
+	with open(os.path.join(CONF_DIR, 'name_corrections.json'), encoding='utf8') as f:
 		name_corrections = json.load(f)
 
 	# scraping will start since the most recent debate date
@@ -1003,7 +1006,7 @@ def scrape_new_debates(term):
 		dpart_video = dp['video']['url']
 		new_sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
 		if new_sitting is None:
-			logging.info('Sitting number not found in the heading `%s`' % dpart['nadpis'])
+			logging.warn('Sitting number not found in the heading `%s`, debate part skipped' % dpart['nadpis'])
 			continue
 
 		if not session_name.startswith('%s. ' % dp['schôdza']):
@@ -1111,7 +1114,7 @@ def scrape_new_debates(term):
 
 				# create unknown speakers
 				if not speaker_id:
-					logging.info('Speaker `%s, %s` not found, creating new Person' % (name, attribution))
+					logging.warn('Speaker `%s, %s` not found, creating new Person' % (name, attribution))
 					name_parts = re.match(r'(\w+\.?)( (\w+\.?))? (\w+)', name)
 					person = {
 						'name': name,
@@ -1165,10 +1168,10 @@ def main():
 	args = ap.parse_args()
 
 	# set-up logging to a local file
-	if not os.path.exists(LOGS_PATH):
-		os.makedirs(LOGS_PATH)
+	if not os.path.exists(LOGS_DIR):
+		os.makedirs(LOGS_DIR)
 	logname = datetime.utcnow().strftime('%Y-%m-%d-%H%M%S') + '.log'
-	logname = os.path.join(LOGS_PATH, logname)
+	logname = os.path.join(LOGS_DIR, logname)
 	logname = os.path.abspath(logname)
 	logging.basicConfig(level=logging.DEBUG, format='%(message)s', handlers=[logging.FileHandler(logname, 'w', 'utf-8')])
 	logging.getLogger('requests').setLevel(logging.ERROR)
@@ -1177,7 +1180,9 @@ def main():
 	try:
 		# set-up the API access
 		vpapi.parliament('sk/nrsr')
-		vpapi.authorize('scraper', os.environ['VPAPI_PWD_SK_NRSR'])
+		with open(os.path.join(CONF_DIR, 'private.json'), encoding='utf8') as f:
+			creds = json.load(f)
+		vpapi.authorize(creds['user'], creds['password'])
 
 		# indicate that the scraper has started
 		db_log = vpapi.post('logs', {'status': 'running', 'file': logname, 'params': args.__dict__})
