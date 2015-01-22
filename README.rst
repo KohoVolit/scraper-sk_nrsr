@@ -1,5 +1,5 @@
 ===============
-sk_nrsr_scraper
+scraper-sk_nrsr
 ===============
 
 Scraper of Slovak National Council for `Visegrad+ project`_. Scrapes MPs, their memberships, votes and debates and stores the data into `Visegrad+ parliament API`_.
@@ -42,7 +42,7 @@ Get the scraper:
 
       $ sudo mkdir --p /home/projects/scrapers
       $ cd /home/projects/scrapers
-      $ sudo git clone https://github.com/KohoVolit/sk_nrsr_scraper.git sk_nrsr
+      $ sudo git clone https://github.com/KohoVolit/scraper-sk_nrsr.git sk_nrsr
 
 Get VPAPI client and SSH certificate of the server:
 
