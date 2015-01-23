@@ -14,7 +14,11 @@ def load_samples(filename):
 		return json.load(f)
 
 
-class ParseMpList(unittest.TestCase):
+class MaxDiffTestCase(unittest.TestCase):
+	maxDiff = None
+
+
+class ParseMpList(MaxDiffTestCase):
 	def test_sample_mp_lists(self):
 		"""parse.mp_list should give expected result on sample MP lists"""
 		for sample in load_samples('mp_list'):
@@ -27,7 +31,7 @@ class ParseMpList(unittest.TestCase):
 		self.assertRaises(ValueError, parse.mp_list, '999')
 
 
-class ParseMp(unittest.TestCase):
+class ParseMp(MaxDiffTestCase):
 	def test_sample_mp(self):
 		"""parse.mp should give expected result on sample MPs"""
 		for sample in load_samples('mp'):
@@ -49,7 +53,7 @@ class ParseMp(unittest.TestCase):
 		self.assertRaises(ValueError, parse.mp, '226', '999')
 
 
-class ParseGroupList(unittest.TestCase):
+class ParseGroupList(MaxDiffTestCase):
 	def test_sample_group_lists(self):
 		"""parse.group_list should give expected result on sample group lists"""
 		for sample in load_samples('group_list'):
@@ -66,7 +70,7 @@ class ParseGroupList(unittest.TestCase):
 		self.assertRaises(ValueError, parse.group_list, 'committee', '999')
 
 
-class ParseGroup(unittest.TestCase):
+class ParseGroup(MaxDiffTestCase):
 	def test_sample_groups(self):
 		"""parse.group should give expected result on sample groups"""
 		for sample in load_samples('group'):
@@ -85,7 +89,7 @@ class ParseGroup(unittest.TestCase):
 		self.assertRaises(RuntimeError, parse.group, 'committee', '9999')
 
 
-class ParseChangeList(unittest.TestCase):
+class ParseChangeList(MaxDiffTestCase):
 	def test_sample_changes(self):
 		"""parse.change_list should give expected result on sample changes"""
 		for sample in load_samples('change_list'):
@@ -99,7 +103,7 @@ class ParseChangeList(unittest.TestCase):
 
 
 @unittest.skip("Speaker is not used in scraping.")
-class ParseSpeaker(unittest.TestCase):
+class ParseSpeaker(MaxDiffTestCase):
 	def test_sample_speaker(self):
 		"""parse.speaker should give expected result on sample speaker"""
 		for sample in load_samples('speaker'):
@@ -110,7 +114,7 @@ class ParseSpeaker(unittest.TestCase):
 
 
 @unittest.skip("Deputy speakers are not used in scraping.")
-class ParseDeputySpeakers(unittest.TestCase):
+class ParseDeputySpeakers(MaxDiffTestCase):
 	def test_sample_deputy_speakers(self):
 		"""parse.deputy_speakers should give expected result on sample deputy speakers"""
 		for sample in load_samples('deputy_speakers'):
@@ -119,7 +123,7 @@ class ParseDeputySpeakers(unittest.TestCase):
 			self.assertEqual(result, sample['expected'])
 
 
-class ParseSessionList(unittest.TestCase):
+class ParseSessionList(MaxDiffTestCase):
 	def test_sample_session_lists(self):
 		"""parse.session_list should give expected result on sample session lists"""
 		for sample in load_samples('session_list'):
@@ -132,7 +136,7 @@ class ParseSessionList(unittest.TestCase):
 		self.assertRaises(ValueError, parse.session_list, '999')
 
 
-class ParseSession(unittest.TestCase):
+class ParseSession(MaxDiffTestCase):
 	def test_sample_sessions(self):
 		"""parse.session should give expected result on sample session"""
 		for sample in load_samples('session'):
@@ -154,7 +158,7 @@ class ParseSession(unittest.TestCase):
 		self.assertRaises(ValueError, parse.session, '1', '999')
 
 
-class ParseMotion(unittest.TestCase):
+class ParseMotion(MaxDiffTestCase):
 	def test_sample_motions(self):
 		"""parse.motion should give expected result on sample motions"""
 		for sample in load_samples('motion'):
@@ -168,7 +172,7 @@ class ParseMotion(unittest.TestCase):
 		self.assertRaises(RuntimeError, parse.motion, '0')
 
 
-class ParseNewDebatesList(unittest.TestCase):
+class ParseNewDebatesList(MaxDiffTestCase):
 	def test_sample_lists(self):
 		"""parse.new_debates_list should give expected result on sample debate lists"""
 		for sample in load_samples('new_debates_list'):
@@ -181,7 +185,7 @@ class ParseNewDebatesList(unittest.TestCase):
 		self.assertRaises(ValueError, parse.new_debates_list, '4')
 
 
-class ParseDebateOfTerms56(unittest.TestCase):
+class ParseDebateOfTerms56(MaxDiffTestCase):
 	def test_sample_debates(self):
 		"""parse.debates_of_terms56 should give expected result on sample debates"""
 		for sample in load_samples('debate_of_terms_56'):
