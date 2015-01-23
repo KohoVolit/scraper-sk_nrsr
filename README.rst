@@ -57,7 +57,7 @@ Create a virtual environment for the scraper and install the required packages i
   .. code-block:: console
 
       $ sudo virtualenv /home/projects/.virtualenvs/scrapers/sk_nrsr --no-site-packages
-      (sk_nrsr)$ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
+      $ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
       (sk_nrsr)$ sudo pip install -r requirements.txt
       (sk_nrsr)$ deactivate
 
