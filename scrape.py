@@ -1182,7 +1182,7 @@ def main():
 		vpapi.parliament('sk/nrsr')
 		with open(os.path.join(CONF_DIR, 'private.json'), encoding='utf8') as f:
 			creds = json.load(f)
-		vpapi.authorize(creds['user'], creds['password'])
+		vpapi.authorize(creds['api_user'], creds['password'])
 
 		# indicate that the scraper has started
 		db_log = vpapi.post('logs', {'status': 'running', 'file': logname, 'params': args.__dict__})
