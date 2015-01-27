@@ -73,9 +73,35 @@ Copy file ``conf/private-example.json`` to ``conf/private.json`` and fill in you
 Running
 =======
 
-Run in the virtual environment. See help message of the scraper for parameters the scraper accepts:
+Run in the virtual environment. See help message of the scraper for parameters the scraper accepts
 
   .. code-block:: console
 
       $ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
       $ python scrape.py --help
+
+Scrape people and their memberships first, then debates and finally votes (initial scrape of debates deletes all existing sessions and sittings)
+
+  .. code-block:: console
+
+      $ python scrape.py --people initial --debates none --votes none
+      $ python scrape.py --people none --debates initial --votes none
+      $ python scrape.py --people none --debates none --votes initial
+
+or all at once
+
+  .. code-block:: console
+
+      $ python scrape.py --people initial --debates initial --votes initial
+
+Then schedule periodic scrape
+
+  .. code-block:: console
+
+      $ python scrape.py --people recent --debates recent --votes recent
+
+or, knowing that ``recent`` is the default value, simply
+
+  .. code-block:: console
+
+      $ python scrape.py
