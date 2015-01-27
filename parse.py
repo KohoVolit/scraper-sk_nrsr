@@ -425,11 +425,15 @@ def session(session_number, term=None):
 		'&ZakZborID=13&CisObdobia=%s&CisSchodze=%s&ShowCisloSchodze=False' % \
 		(term, session_number)
 	content = scrapeutils.download(url)
+
+	result = {
+		'url': url,
+		'_items': []
+	}
 	if 'V systéme nie sú evidované žiadne hlasovania vyhovujúce zadanej požiadavke.' in content:
-		return []
+		return result
 	html = lxml.html.fromstring(content)
 
-	result = []
 	page = 1
 	while True:
 		# extract all motions from the current page
@@ -457,7 +461,7 @@ def session(session_number, term=None):
 			vote_link2 = tr.find('td[5]/a').get('href')
 			if vote_link2:
 				motion['url']['kluby'] = 'http://www.nrsr.sk/web/' + vote_link2
-			result.append(motion)
+			result['_items'].append(motion)
 
 		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__resultGrid2"]/tr[1]//span')
 		if current_page is None: break
@@ -558,12 +562,16 @@ def old_debates_list(term):
 	if term not in ['1', '2', '3', '4']:
 		raise ValueError("Old style transcripts are not available for term '%s'" % term)
 
-	result = []
+	base_url = 'http://www.nrsr.sk/dl/Browser/Grid?nodeType=DocType&legId=13&chamberId=0' + \
+			'&categoryId=1&committeeId=0&documentTypeId=5&folderId=0&meetingNr=' + \
+			'&termNr=%s' % term
+	result = {
+		'url': base_url,
+		'_items': []
+	}
 	page = 0
 	while True:
-		url = 'http://www.nrsr.sk/dl/Browser/Grid?nodeType=DocType&legId=13&chamberId=0' + \
-			'&categoryId=1&committeeId=0&documentTypeId=5&folderId=0&meetingNr=' + \
-			'&termNr=%s&pageIndex=%s' % (term, page)
+		url = base_url + '&pageIndex=%s' % page
 		content = scrapeutils.download(url)
 		html = lxml.html.fromstring(content)
 
@@ -578,7 +586,7 @@ def old_debates_list(term):
 				'url': 'http://www.nrsr.sk' + title.get('href'),
 				'id': doc_id.group(1)
 			}
-			result.append(debate)
+			result['_items'].append(debate)
 
 		page += 1
 		pages = html.findtext('.//div[@class="pager"]/span[last()]')
@@ -675,7 +683,10 @@ def new_debates_list(term, since_date=None, until_date=None):
 	content = scrapeutils.download(url, 'POST', data, base_ext)
 	html = lxml.html.fromstring(content)
 
-	result = []
+	result = {
+		'url': url,
+		'_items': []
+	}
 	page = 1
 	while True:
 		# extract all debate parts from the current page
@@ -716,7 +727,7 @@ def new_debates_list(term, since_date=None, until_date=None):
 				else:
 					raise RuntimeError('Unrecognized link in section %s/%s/%s' %
 						(session_number.text, date.text, time_interval.text))
-			result.append(debate_part)
+			result['_items'].append(debate_part)
 
 		# test if there is a link to next page
 		current_page = html.find('.//table[@id="_sectionLayoutContainer_ctl01__newDebate"]//tr[1]//span')

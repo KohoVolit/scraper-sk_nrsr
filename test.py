@@ -141,7 +141,7 @@ class ParseSession(MaxDiffTestCase):
 		"""parse.session should give expected result on sample session"""
 		for sample in load_samples('session'):
 			result = parse.session(sample['session_number'], sample['term'])
-			result = result[sample['index']]
+			result = result['_items'][sample['index']]
 			self.assertEqual(result, sample['expected'])
 
 	def test_invalid_session_number(self):
@@ -151,7 +151,7 @@ class ParseSession(MaxDiffTestCase):
 	def test_nonexistent_session_number(self):
 		"""parse.session should return empty result for a session number that does not exist"""
 		result = parse.session('999')
-		self.assertEqual(result, [])
+		self.assertEqual(result['_items'], [])
 
 	def test_nonexistent_term(self):
 		"""parse.session should fail for a term that does not exist"""
@@ -178,7 +178,7 @@ class ParseNewDebatesList(MaxDiffTestCase):
 		for sample in load_samples('new_debates_list'):
 			result = parse.new_debates_list(sample['term'],
 				since_date=sample['since_date'], until_date=sample['until_date'])
-			self.assertEqual(result[sample['index']], sample['expected'])
+			self.assertEqual(result['_items'][sample['index']], sample['expected'])
 
 	def test_wrong_term(self):
 		"""parse.new_debates_list should fail for a term before 5th one"""

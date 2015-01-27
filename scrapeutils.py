@@ -6,7 +6,7 @@ import html
 import re
 
 USE_WEBCACHE = False
-WEBCACHE_PATH = 'webcache'
+WEBCACHE_PATH = os.path.join(os.path.dirname(__file__), 'webcache')
 CS_LOWERS = 'aáäbcčdďeéěfghiíjklĺľmnňoóôpqrŕřsštťuúůvwxyýzž'
 CS_UPPERS = 'ÁÄBCČDĎEÉĚFGHIÍJKLĹĽMNŇOÓÔPQRŔŘSŠTŤUÚŮVWXYÝZŽ'
 

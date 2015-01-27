@@ -9,6 +9,8 @@ import sys
 import io
 import json
 from datetime import date, datetime, timedelta
+import subprocess
+import time
 
 import lxml.html
 import pytz
@@ -49,11 +51,14 @@ def sk_to_utc(dt_str):
 	match = re.search(SK_MONTHS_REGEX, dt_str, re.IGNORECASE)
 	if match:
 		month = match.group(0)
-		dt_str = dt_str.replace(month, SK_MONTHS[month[:3].lower()] + '.')
+		dt_str = dt_str.replace(month, '%s.' % SK_MONTHS[month[:3].lower()])
 	dt = dateutil.parser.parse(dt_str, dayfirst=True)
-	dt = LOCAL_TIMEZONE.localize(dt)
-	dt = dt.astimezone(pytz.utc)
-	format = '%Y-%m-%dT%H:%M:%S' if ':' in dt_str else '%Y-%m-%d'
+	if ':' in dt_str:
+		dt = LOCAL_TIMEZONE.localize(dt)
+		dt = dt.astimezone(pytz.utc)
+		format = '%Y-%m-%dT%H:%M:%S'
+	else:
+		format = '%Y-%m-%d'
 	return dt.strftime(format)
 
 
@@ -510,8 +515,8 @@ def scrape_motions(term):
 	session_list = parse.session_list(term)
 	for session in session_list['_items']:
 		motions = parse.session(session['číslo'], term)
-		if len(motions) == 0: continue
-		last_motion_id = motions[-1]['id']
+		if len(motions['_items']) == 0: continue
+		last_motion_id = motions['_items'][-1]['id']
 		m = vpapi.get('motions',
 			where={'sources.url': 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % last_motion_id})
 		if m['_items']: break
@@ -530,7 +535,7 @@ def scrape_motions(term):
 			'type': 'session',
 		}
 		try:
-			session['start_date'] = sk_to_utc(s['trvanie'])
+			session['start_date'] = sk_to_utc(s['trvanie']) + 'T00:00:00'
 			session['end_date'] = session['start_date']
 		except ValueError:
 			# multiday session contains votes; dates will be set by debates scraping
@@ -538,7 +543,7 @@ def scrape_motions(term):
 		key = ('organization_id', 'type', 'identifier')
 		session_id, _ = get_or_create('events', session, key)
 
-		for i, m in enumerate(motions):
+		for i, m in enumerate(motions['_items']):
 			# check if the motion is already present
 			m_id = re.search(r'ID=(\d+)', m['url']['výsledok']).group(1)
 			# we not use directly m['url']['kluby'] because it is not always present
@@ -551,7 +556,7 @@ def scrape_motions(term):
 				vote_event_id = None
 
 				# insert motion
-				logging.info('Scraping motion %s of %s (voted at %s)' % (i+1, len(motions), m['dátum']))
+				logging.info('Scraping motion %s of %s (voted at %s)' % (i+1, len(motions['_items']), m['dátum']))
 				parsed_motion = parse.motion(m['id'])
 				motion = {
 					'organization_id': chamber_id,
@@ -696,15 +701,20 @@ def scrape_old_debates(term):
 
 	# add the debate missing in the list
 	if term == '4':
-		debates.append({
+		debates['_items'].append({
 			'názov': 'Autorizovaná rozprava, 48. schôdza NR SR, 3. 2. 2010',
 			'id': '2010_02_03',
 			'url': 'http://www.nrsr.sk/dl/Browser/DsDocument?documentId=391413'
 		})
 
+	# run unoconv listener and wait a bit until it starts
+	os.environ['HOME'] = '/tmp'
+	subprocess.Popen(['unoconv', '--listener'])
+	time.sleep(10)
+
 	speech_count = 0
 	session_name = ''
-	for debate in debates:
+	for debate in debates['_items']:
 		# skip obsolete debates in the list
 		if term == '1':
 			if (debate['názov'] == 'Stenozáznam' and debate['id'] != '198550' or
@@ -782,12 +792,17 @@ def scrape_old_debates(term):
 				insert_speech('speech')
 
 				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
-				date = sk_to_utc(sk_date + ' 00:00:00')
+				date = sk_to_utc(sk_date) + 'T00:00:00'
 				if hd.group(1).startswith('sláv'):
 					new_session_name = 'Mimoriadna schôdza'
-					sl = parse.session_list(term)
-					d = '%i. %i. %i' % (date[8:2], date[5:2], date[0:4])
-					new_session_identifier = [s['číslo'] for s in sl if sl['trvanie'] == d].pop()
+					if term == '1':
+						new_session_identifier = debate['časť']
+					elif term == '2':
+						new_session_identifier = '1000'
+					else:
+						sl = parse.session_list(term)
+						d = '%s. %s. %s' % (int(date[8:10]), int(date[5:7]), int(date[0:4]))
+						new_session_identifier = next((s['číslo'] for s in sl['_items'] if s['trvanie'] == d))
 				else:
 					new_session_name = '%s. schôdza' % hd.group(3)
 					new_session_identifier = hd.group(3)
@@ -883,7 +898,7 @@ def scrape_old_debates(term):
 			ds = re.match(r'^\s*(\d+\.\s\w+\s\d{4})(.*hodine)?\s*$', par)
 			if ds:
 				try:
-					date = sk_to_utc(ds.group(1).strip())
+					date = sk_to_utc(ds.group(1).strip()) + 'T00:00:00'
 					continue
 				except ValueError:
 					pass
@@ -988,7 +1003,7 @@ def scrape_new_debates(term):
 	speech_count = 0
 	session_name = ''
 	speeches = []
-	for dp in debate_parts:
+	for dp in debate_parts['_items']:
 		if 'prepis' not in dp: continue
 
 		# skip already scraped debate parts
@@ -1051,7 +1066,7 @@ def scrape_new_debates(term):
 			if len(speeches) > 0:
 				vpapi.post('speeches', speeches)
 				speech_count += len(speeches)
-			if dp != debate_parts[0]:
+			if dp != debate_parts['_items'][0]:
 				logging.info('Scraped %s speeches' % len(speeches))
 			speeches = []
 
