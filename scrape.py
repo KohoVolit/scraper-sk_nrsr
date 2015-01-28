@@ -1004,7 +1004,11 @@ def scrape_new_debates(term):
 	session_name = ''
 	speeches = []
 	for dp in debate_parts['_items']:
-		if 'prepis' not in dp: continue
+		# stop at very recent debate parts (may be incomplete)
+		start_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['od']))
+		sd = datetime.strptime(start_datetime, '%Y-%m-%dT%H:%M:%S')
+		if 'prepis' not in dp or datetime.utcnow() - sd < timedelta(hours=12):
+			break
 
 		# skip already scraped debate parts
 		resp = vpapi.get('speeches', where={'sources.url': dp['prepis']['url']})
@@ -1014,7 +1018,6 @@ def scrape_new_debates(term):
 			(dp['dátum'], dp['trvanie']['od'], dp['trvanie']['do'], dp['prepis']['id']))
 		dpart = parse.debate_of_terms56(dp['prepis']['id'])
 
-		start_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['od']))
 		end_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['do']))
 		dpart_kind = dp['druh']
 		dpart_url = dp['prepis']['url']
