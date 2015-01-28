@@ -420,7 +420,7 @@ class Membership:
 		"""
 		resp = vpapi.get('memberships',
 			where={'person_id': self.person_id, 'organization_id': self.organization_id},
-			sort=[('start_date', -1)])
+			sort='-start_date')
 		to_save = self.__dict__
 		id = None
 		for existing in resp['_items']:
@@ -713,7 +713,7 @@ def scrape_old_debates(term):
 	time.sleep(10)
 
 	speech_count = 0
-	session_name = ''
+	session_identifier = None
 	for debate in debates['_items']:
 		# skip obsolete debates in the list
 		if term == '1':
@@ -807,7 +807,7 @@ def scrape_old_debates(term):
 					new_session_name = '%s. schôdza' % hd.group(3)
 					new_session_identifier = hd.group(3)
 
-				if new_session_name != session_name:
+				if new_session_identifier != session_identifier:
 					# create new session event
 					session = {
 						'name': new_session_name,
@@ -819,7 +819,7 @@ def scrape_old_debates(term):
 					}
 					key = ('organization_id', 'type', 'identifier')
 					session_id, _ = get_or_create('events', session, key)
-					session_name = new_session_name
+					session_identifier = new_session_identifier
 					session_end_date = date
 					sitting_count = 0
 
@@ -916,7 +916,7 @@ def scrape_old_debates(term):
 				par = scene.group(3)
 
 			if par:
-				text += '\n\n<p>%s</p>' % par
+				text += '\n\n<p>%s</p>' % par.strip()
 
 		insert_speech('speech')
 
@@ -991,11 +991,11 @@ def scrape_new_debates(term):
 	with open(os.path.join(CONF_DIR, 'name_corrections.json'), encoding='utf8') as f:
 		name_corrections = json.load(f)
 
-	# scraping will start since the most recent debate date
-	resp = vpapi.get('speeches',
-		where={'organization_id': chamber_id},
-		sort=[('start_date', -1)])
-	since_date = resp['_items'][0]['date'][:10] if resp['_items'] else None
+	# scraping will start since the most recent sitting date
+	resp = vpapi.get('events',
+		where={'type': 'sitting', 'parent_id': chamber_id},
+		sort='-start_date')
+	since_date = resp['_items'][0]['start_date'][:10] if resp['_items'] else None
 
 	# scrape list of debate parts
 	debate_parts = parse.new_debates_list(term, since_date)
