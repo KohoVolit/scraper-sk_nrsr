@@ -659,7 +659,6 @@ def scrape_old_debates(term):
 		position = position + 1
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
-			'date': date,
 			'type': type,
 			'position': position,
 			'event_id': sitting_id,
@@ -707,11 +706,6 @@ def scrape_old_debates(term):
 			'url': 'http://www.nrsr.sk/dl/Browser/DsDocument?documentId=391413'
 		})
 
-	# run unoconv listener and wait a bit until it starts
-	os.environ['HOME'] = '/tmp'
-	subprocess.Popen(['unoconv', '--listener'])
-	time.sleep(10)
-
 	speech_count = 0
 	session_identifier = None
 	for debate in debates['_items']:
@@ -722,6 +716,9 @@ def scrape_old_debates(term):
 				continue
 		elif term == '2':
 			if debate['názov'].startswith('Stenografická') and debate['id'] != '92098':
+				continue
+		elif term == '3':
+			if debate['id'] == '181047':
 				continue
 
 		logging.info('Scraping debate `%s` (id=%s)' % (debate['názov'], debate['id']))
@@ -755,8 +752,8 @@ def scrape_old_debates(term):
 			if not par: continue
 
 			# fix last scene
-			if re.match(r'Rokovanie.*? schôdze .*?\s+(sa skončilo|skončené)\s+o\s+.*?\s+hodine', par):
-				if not par.startswith('('):
+			if re.search(r'\b(skončil.|skončené|prerušené|Prerušenie rokovani[ae])\s+o\s+(.*?)\s+hodine.', par):
+				if not par[0] in ('(', '[', '/'):
 					par = '(%s)' % par
 
 			# convert slash pairs and brackets to parentheses
@@ -765,7 +762,7 @@ def scrape_old_debates(term):
 			# convert all inner nested parentheses to brackets
 			n = 1
 			while n >= 1:
-				(par, n) = re.subn(r'\((.*?)\((\.*?)\)(.*?)\)', r'(\1[\2]\3)', par, flags=re.DOTALL)
+				(par, n) = re.subn(r'\((.*?)\((.*?)\)(.*?)\)', r'(\1[\2]\3)', par, flags=re.DOTALL)
 
 			# process eventual multiparagraph scene
 			if par.startswith('(') and par.count('(') > par.count(')'):
@@ -785,14 +782,20 @@ def scrape_old_debates(term):
 				continue
 
 			# process eventual header
-			header_pattern = r'((\(?(\d+)\.\)?\s+schôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s+(\d{4}).*?_{3,}$'
+			header_pattern = r'((\(?(\d+)\.\)?\s+schôdz)|slávnostn).*?(\d+)\..*\b(\w{3,})\s+(\d{4})(.*?)_{3,}$'
 			hd = re.search(header_pattern, par, re.DOTALL)
 			if hd:
 				# save eventual previous speech
 				insert_speech('speech')
 
 				sk_date = '%s. %s %s' % (hd.group(4), hd.group(5), hd.group(6))
-				date = sk_to_utc(sk_date) + 'T00:00:00'
+				initial_time = re.search(r'\s+o\s+(.*?)\s+hodine', hd.group(7), re.DOTALL)
+				if initial_time and initial_time.group(1) != '??':
+					h, m = initial_time.group(1).strip('.').split('.')
+					date = sk_to_utc(sk_date + ' %s:%s:00' % (h.strip().zfill(2), m.strip().zfill(2)))
+				else:
+					date = sk_to_utc(sk_date) + 'T00:00:00'
+
 				if hd.group(1).startswith('sláv'):
 					new_session_name = 'Mimoriadna schôdza'
 					if term == '1':
@@ -815,7 +818,6 @@ def scrape_old_debates(term):
 						'organization_id': chamber_id,
 						'type': 'session',
 						'start_date': date,
-						'end_date': date,
 					}
 					key = ('organization_id', 'type', 'identifier')
 					session_id, _ = get_or_create('events', session, key)
@@ -831,7 +833,6 @@ def scrape_old_debates(term):
 					'organization_id': chamber_id,
 					'type': 'sitting',
 					'start_date': date,
-					'end_date': date,
 					'parent_id': session_id,
 				}
 				key = ('parent_id', 'type', 'identifier')
@@ -897,8 +898,14 @@ def scrape_old_debates(term):
 			# recognize date(-time) stamps in transcripts
 			ds = re.match(r'^\s*(\d+\.\s\w+\s\d{4})(.*hodine)?\s*$', par)
 			if ds:
+				dt = ds.group(1).strip()
+				tm = re.search(r'o\s+(.*?)\s+', ds.group(2) or '')
 				try:
-					date = sk_to_utc(ds.group(1).strip()) + 'T00:00:00'
+					if tm:
+						h, m = tm.group(1).strip('.').split('.')
+						date = sk_to_utc('%s %s:%s:00' % (dt, h.strip().zfill(2), m.strip().zfill(2)))
+					else:
+						date = sk_to_utc(dt) + 'T00:00:00'
 					continue
 				except ValueError:
 					pass
@@ -919,6 +926,19 @@ def scrape_old_debates(term):
 				text += '\n\n<p>%s</p>' % par.strip()
 
 		insert_speech('speech')
+
+		# extract end time of the session
+		final_time = re.search(
+			r'\b(skončil.|skončené|prerušené|Prerušenie rokovani[ae])\s+o\s+(.*?)\s+hodine.',
+			speeches[-1]['text'])
+		if final_time:
+			tm = final_time.group(2)
+			tm = tm.replace('O', '0').replace(',', '.')
+			h, m = tm.strip('.').split('.')
+			final_date = '%s.%s.%s %s:%s:00' % (date[8:10], date[5:7], date[0:4], h.strip().zfill(2), m.strip().zfill(2))
+			final_date = sk_to_utc(final_date)
+			vpapi.patch('events/%s' % session_id, {'end_date': final_date})
+			vpapi.patch('events/%s' % sitting_id, {'end_date': final_date})
 
 		vpapi.post('speeches', speeches)
 		logging.info('Scraped %s speeches' % len(speeches))
@@ -959,7 +979,6 @@ def scrape_new_debates(term):
 		if not text: return
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
-			'video': dpart_video,
 			'date': start_datetime,
 			'type': debate_part_kinds.get(kind, 'speech'),
 			'position': len(speeches) + 1,
@@ -969,6 +988,8 @@ def scrape_new_debates(term):
 				'note': 'Prepis časti debaty na webe NRSR'
 			}]
 		}
+		if dpart_video:
+			speech['video'] = dpart_video
 		if kind != 'scene':
 			speech['creator_id'] = speaker_id
 			speech['attribution_text'] = attribution.strip()
@@ -1007,7 +1028,7 @@ def scrape_new_debates(term):
 		# stop at very recent debate parts (may be incomplete)
 		start_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['od']))
 		sd = datetime.strptime(start_datetime, '%Y-%m-%dT%H:%M:%S')
-		if 'prepis' not in dp or datetime.utcnow() - sd < timedelta(hours=12):
+		if 'prepis' not in dp or datetime.utcnow() - sd < timedelta(hours=6):
 			break
 
 		# skip already scraped debate parts
@@ -1021,7 +1042,7 @@ def scrape_new_debates(term):
 		end_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['do']))
 		dpart_kind = dp['druh']
 		dpart_url = dp['prepis']['url']
-		dpart_video = dp['video']['url']
+		dpart_video = dp['video']['url'] if 'video' in dp else None
 		new_sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
 		if new_sitting is None:
 			logging.warn('Sitting number not found in the heading `%s`, debate part skipped' % dpart['nadpis'])
@@ -1203,7 +1224,8 @@ def main():
 		vpapi.authorize(creds['api_user'], creds['password'])
 
 		# indicate that the scraper has started
-		db_log = vpapi.post('logs', {'status': 'running', 'file': logname, 'params': args.__dict__})
+		status = 'running'
+		db_log = vpapi.post('logs', {'status': status, 'file': logname, 'params': args.__dict__})
 
 		# clear cached source files
 		logging.info('Clearing cached files')

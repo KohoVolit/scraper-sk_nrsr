@@ -625,6 +625,7 @@ def debate_of_term1(id):
 			if text:
 				result.append(scrapeutils.clear_hyphens(text, '\n'))
 			text = line
+	result.append(scrapeutils.clear_hyphens(text, '\n'))
 
 	return scrapeutils.plaintext(result)
 
@@ -643,8 +644,8 @@ def debate_of_terms234(id):
 
 	# convert from RTF to HTML using unoconv using LibreOffice
 	content = subprocess.check_output(['unoconv', '-f', 'html', '--stdout', filename])
-
 	html = lxml.html.fromstring(content)
+
 	result = []
 	for par in html.findall('./body/p'):
 		result.append(par.text_content())
