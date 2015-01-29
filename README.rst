@@ -80,6 +80,12 @@ Run in the virtual environment. See help message of the scraper for parameters t
       $ source /home/projects/.virtualenvs/scrapers/sk_nrsr/bin/activate
       $ python scrape.py --help
 
+``unoconv`` listener must be running to scrape transcripts of former debates (election terms 1-4)
+
+  .. code-block:: console
+
+      $ unoconv --listener
+
 Scrape people and their memberships first, then debates and finally votes (initial scrape of debates deletes all existing sessions and sittings)
 
   .. code-block:: console
@@ -93,6 +99,10 @@ or all at once
   .. code-block:: console
 
       $ python scrape.py --people initial --debates initial --votes initial
+
+You can stop unoconv listener unless needed for other scrapers or conversions
+
+      $ killall soffice.bin
 
 Then schedule periodic scrape
 
