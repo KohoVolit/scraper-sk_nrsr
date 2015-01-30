@@ -84,34 +84,34 @@ Run in the virtual environment. See help message of the scraper for parameters t
 
   .. code-block:: console
 
-      $ unoconv --listener
+      $ unoconv --listener &
 
 Scrape people and their memberships first, then debates and finally votes (initial scrape of debates deletes all existing sessions and sittings)
 
   .. code-block:: console
 
-      $ python scrape.py --people initial --debates none --votes none
-      $ python scrape.py --people none --debates initial --votes none
-      $ python scrape.py --people none --debates none --votes initial
+      $ sudo -u visegrad python scrape.py --people initial --debates none --votes none
+      $ HOME=/tmp sudo -u visegrad python scrape.py --people none --debates initial --votes none
+      $ sudo -u visegrad python scrape.py --people none --debates none --votes initial
 
-or all at once
+(unoconv creates tmp files in HOME). Or all at once
 
   .. code-block:: console
 
-      $ python scrape.py --people initial --debates initial --votes initial
+      $ HOME=/tmp python sudo -u visegrad scrape.py --people initial --debates initial --votes initial
 
 You can stop unoconv listener unless needed for other scrapers or conversions
 
-      $ killall soffice.bin
+      $ sudo killall soffice.bin
 
 Then schedule periodic scrape
 
   .. code-block:: console
 
-      $ python scrape.py --people recent --debates recent --votes recent
+      $ sudo -u visegrad python scrape.py --people recent --debates recent --votes recent
 
 or, knowing that ``recent`` is the default value, simply
 
   .. code-block:: console
 
-      $ python scrape.py
+      $ sudo -u visegrad python scrape.py
