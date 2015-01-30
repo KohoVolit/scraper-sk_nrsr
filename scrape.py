@@ -1224,8 +1224,7 @@ def main():
 		vpapi.authorize(creds['api_user'], creds['password'])
 
 		# indicate that the scraper has started
-		status = 'running'
-		db_log = vpapi.post('logs', {'status': status, 'file': logname, 'params': args.__dict__})
+		db_log = vpapi.post('logs', {'status': 'running', 'file': logname, 'params': args.__dict__})
 
 		# clear cached source files
 		logging.info('Clearing cached files')
@@ -1296,15 +1295,14 @@ def main():
 			scrape_motions(term)
 
 		status = 'finished'
-		logging.info('Finished')
 
-	except Exception as e:
+	except BaseException as e:
 		logging.critical(e, exc_info=True)
 		if hasattr(e, 'response'):
 			logging.critical(e.response._content.decode('utf-8'))
-		status = 'failed'
-		logging.info('Failed')
+		status = 'interrupted' if isinstance(e, KeyboardInterrupt) else 'failed'
 	finally:
+		logging.info(status.capitalize())
 		if 'db_log' in locals():
 			vpapi.patch('logs/%s' % db_log['id'], {'status': status})
 
