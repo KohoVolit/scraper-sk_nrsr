@@ -91,14 +91,14 @@ Scrape people and their memberships first, then debates and finally votes (initi
   .. code-block:: console
 
       $ sudo -u visegrad python scrape.py --people initial --debates none --votes none
-      $ HOME=/tmp sudo -u visegrad python scrape.py --people none --debates initial --votes none
+      $ sudo -H -u visegrad python scrape.py --people none --debates initial --votes none
       $ sudo -u visegrad python scrape.py --people none --debates none --votes initial
 
 (unoconv creates tmp files in HOME). Or all at once
 
   .. code-block:: console
 
-      $ HOME=/tmp python sudo -u visegrad scrape.py --people initial --debates initial --votes initial
+      $ sudo -H -u visegrad python scrape.py --people initial --debates initial --votes initial
 
 You can stop unoconv listener unless needed for other scrapers or conversions
 
