@@ -102,6 +102,8 @@ Scrape people and their memberships first, then debates and finally votes (initi
 
 You can stop unoconv listener unless needed for other scrapers or conversions
 
+  .. code-block:: console
+
       $ sudo killall soffice.bin
 
 Then schedule periodic scrape
