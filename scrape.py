@@ -1014,7 +1014,7 @@ def scrape_new_debates(term):
 
 	# scraping will start since the most recent sitting date
 	resp = vpapi.get('events',
-		where={'type': 'sitting', 'parent_id': chamber_id},
+		where={'type': 'sitting', 'organization_id': chamber_id},
 		sort='-start_date')
 	since_date = resp['_items'][0]['start_date'][:10] if resp['_items'] else None
 
