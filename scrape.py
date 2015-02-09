@@ -1012,7 +1012,7 @@ def scrape_new_debates(term):
 	with open(os.path.join(CONF_DIR, 'name_corrections.json'), encoding='utf8') as f:
 		name_corrections = json.load(f)
 
-	# scraping will start since the most recent sitting date
+	# scraping will start since the most recent sitting start date
 	resp = vpapi.get('events',
 		where={'type': 'sitting', 'organization_id': chamber_id},
 		sort='-start_date')
@@ -1028,7 +1028,7 @@ def scrape_new_debates(term):
 		# stop at very recent debate parts (may be incomplete)
 		start_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['od']))
 		sd = datetime.strptime(start_datetime, '%Y-%m-%dT%H:%M:%S')
-		if 'prepis' not in dp or datetime.utcnow() - sd < timedelta(hours=6):
+		if 'prepis' not in dp or datetime.utcnow() - sd < timedelta(hours=12):
 			break
 
 		# skip already scraped debate parts
@@ -1077,21 +1077,15 @@ def scrape_new_debates(term):
 				'parent_id': session_id,
 			}
 			key = ('parent_id', 'type', 'identifier')
-			sitting_id, created = get_or_create('events', sitting, key)
+			sitting_id, _created = get_or_create('events', sitting, key)
 			sitting_end_date = end_datetime
-
-			# delete existing speeches of the sitting
-			if not created:
-				obsolete = get_all_items('speeches', where={'event_id': sitting_id})
-				for speech in obsolete:
-					vpapi.delete('speeches/%s' % speech['id'])
 
 			# save speeches of the previous sitting
 			if len(speeches) > 0:
 				vpapi.post('speeches', speeches)
 				speech_count += len(speeches)
 			if dp != debate_parts['_items'][0]:
-				logging.info('Scraped %s speeches' % len(speeches))
+				logging.info('Scraped %s speeches from previous sitting' % len(speeches))
 			speeches = []
 
 		# add the first speaker name that is sometimes missing
@@ -1301,6 +1295,10 @@ def main():
 		if hasattr(e, 'response'):
 			logging.critical(e.response._content.decode('utf-8'))
 		status = 'interrupted' if isinstance(e, KeyboardInterrupt) else 'failed'
+
+		# output to console to provoke an e-mail from Cron
+		print('Scraping of parliament sk/nrsr failed, see\n' + logname + '\nfor details.')
+
 	finally:
 		logging.info(status.capitalize())
 		if 'db_log' in locals():
