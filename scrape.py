@@ -25,7 +25,7 @@ BASE_DIR = os.path.dirname(__file__)
 CONF_DIR = os.path.join(BASE_DIR, 'conf')
 LOGS_DIR = '/var/log/scrapers/sk/nrsr'
 
-scrapeutils.USE_WEBCACHE = True
+scrapeutils.USE_WEBCACHE = False
 LOCAL_TIMEZONE = pytz.timezone('Europe/Bratislava')
 
 SK_MONTHS = {
