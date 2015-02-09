@@ -89,19 +89,19 @@ def get_or_create(resource, item, key=None):
 	if key is None:
 		key = item.keys()
 	query = {field: item[field] for field in key}
-	resp = vpapi.get(resource, where=query)
-	if resp['_items']:
-		return resp['_items'][0]['id'], False
+	items = vpapi.getitems(resource, where=query)
+	if items:
+		return items[0]['id'], False
 	resp = vpapi.post(resource, item)
 	return resp['id'], True
 
 
 def get_chamber_id(term):
 	"""Return chamber id of the given term."""
-	resp = vpapi.get('organizations', where={
+	chambers = vpapi.getitems('organizations', where={
 		'classification': 'chamber',
 		'identifiers': {'$elemMatch': {'identifier': term, 'scheme': 'nrsr.sk'}}})
-	return resp['_items'][0]['id'] if resp['_items'] else None
+	return chambers[0]['id'] if chambers else None
 
 
 class Person:
@@ -173,13 +173,12 @@ class Person:
 
 	def save(self):
 		scraped = self.__dict__
-		resp = vpapi.get('people', where={'identifiers': {'$elemMatch': self.identifiers[0]}})
-		if not resp['_items']:
+		existing = vpapi.getitems('people', where={'identifiers': {'$elemMatch': self.identifiers[0]}})
+		if not existing:
 			resp = vpapi.post('people', scraped)
 		else:
 			# update by PUT is preferred over PATCH to correctly remove properties that no longer exist now
-			existing = resp['_items'][0]
-			resp = vpapi.put('people/%s' % existing['id'], scraped, effective_date=effective_date)
+			resp = vpapi.put('people/%s' % existing[0]['id'], scraped, effective_date=effective_date)
 
 		if resp['_status'] != 'OK':
 			raise Exception(self.name, resp)
@@ -259,15 +258,14 @@ class Organization:
 
 	def save(self):
 		scraped = self.__dict__
-		resp = vpapi.get('organizations', where={
+		existing = vpapi.getitems('organizations', where={
 			'classification': self.classification,
 			'identifiers': {'$elemMatch': self.identifiers[0]}})
-		if not resp['_items']:
+		if not existing:
 			resp = vpapi.post('organizations', scraped)
 		else:
 			# update by PUT is preferred over PATCH to correctly remove properties that no longer exist now
-			existing = resp['_items'][0]
-			resp = vpapi.put('organizations/%s' % existing['id'], scraped, effective_date=effective_date)
+			resp = vpapi.put('organizations/%s' % existing[0]['id'], scraped, effective_date=effective_date)
 
 		if resp['_status'] != 'OK':
 			raise Exception(self.name, resp)
@@ -288,11 +286,11 @@ class Membership:
 			logging.info('Scraping mandate change of `%s` at %s' % (change['poslanec']['meno'], change['dátum']))
 
 			# if MP is not scraped yet, scrape and save him
-			resp = vpapi.get('people',
+			existing = vpapi.getitems('people',
 				where={'identifiers': {'$elemMatch': {'identifier': change['poslanec']['id'], 'scheme': 'nrsr.sk'}}},
 				projection={'id': 1})
-			if resp['_items']:
-				pid = resp['_items'][0]['id']
+			if existing:
+				pid = existing[0]['id']
 			else:
 				p = Person.scrape(change['poslanec']['id'], term)
 				pid = p.save()
@@ -331,13 +329,13 @@ class Membership:
 		group = parse.group(group_type, id)
 
 		# if group is not scraped yet, scrape and save it
-		g = vpapi.get('organizations',
+		g = vpapi.getitems('organizations',
 			where={
 				'classification': group_type,
 				'identifiers': {'$elemMatch': {'identifier': id, 'scheme': 'nrsr.sk'}}},
 			projection={'id': 1})
-		if g['_items']:
-			oid = g['_items'][0]['id']
+		if g:
+			oid = g[0]['id']
 		else:
 			o = Organization.scrape(group_type, id)
 			oid = o.save()
@@ -365,11 +363,11 @@ class Membership:
 			logging.info('Scraping membership of `%s`' % member['meno'])
 
 			# if member MP is not scraped yet, scrape and save him
-			resp = vpapi.get('people',
+			existing = vpapi.getitems('people',
 				where={'identifiers': {'$elemMatch': {'identifier': member['id'], 'scheme': 'nrsr.sk'}}},
 				projection={'id': 1})
-			if resp['_items']:
-				pid = resp['_items'][0]['id']
+			if existing:
+				pid = existing[0]['id']
 			else:
 				p = Person.scrape(member['id'], term)
 				pid = p.save()
@@ -418,12 +416,12 @@ class Membership:
 		are compatible. Field 'end_date' is not checked to allow for later corrections
 		of guessed end dates used when a member disappears from a group profile.
 		"""
-		resp = vpapi.get('memberships',
+		memberships = vpapi.getitems('memberships',
 			where={'person_id': self.person_id, 'organization_id': self.organization_id},
 			sort='-start_date')
 		to_save = self.__dict__
 		id = None
-		for existing in resp['_items']:
+		for existing in memberships:
 			if self._merge_values('start_date', to_save, existing) \
 					and self._merge_values('role', to_save, existing) \
 					and self._merge_values('post', to_save, existing):
@@ -517,9 +515,9 @@ def scrape_motions(term):
 		motions = parse.session(session['číslo'], term)
 		if len(motions['_items']) == 0: continue
 		last_motion_id = motions['_items'][-1]['id']
-		m = vpapi.get('motions',
-			where={'sources.url': 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % last_motion_id})
-		if m['_items']: break
+		m_url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % last_motion_id
+		existing = vpapi.getitems('motions', where={'sources.url': m_url})
+		if existing: break
 		sessions_to_scrape.append((session, motions))
 
 	# scrape motions from those sessions
@@ -548,8 +546,8 @@ def scrape_motions(term):
 			m_id = re.search(r'ID=(\d+)', m['url']['výsledok']).group(1)
 			# we not use directly m['url']['kluby'] because it is not always present
 			m_url = 'http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=%s' % m_id
-			resp = vpapi.get('motions', where={'sources.url': m_url})
-			if resp['_items']: continue
+			existing = vpapi.getitems('motions', where={'sources.url': m_url})
+			if existing: continue
 
 			try:
 				motion_id = None
@@ -1013,10 +1011,10 @@ def scrape_new_debates(term):
 		name_corrections = json.load(f)
 
 	# scraping will start since the most recent sitting start date
-	resp = vpapi.get('events',
+	sittings = vpapi.getitems('events',
 		where={'type': 'sitting', 'organization_id': chamber_id},
 		sort='-start_date')
-	since_date = resp['_items'][0]['start_date'][:10] if resp['_items'] else None
+	since_date = sittings[0]['start_date'][:10] if sittings else None
 
 	# scrape list of debate parts
 	debate_parts = parse.new_debates_list(term, since_date)
@@ -1032,8 +1030,8 @@ def scrape_new_debates(term):
 			break
 
 		# skip already scraped debate parts
-		resp = vpapi.get('speeches', where={'sources.url': dp['prepis']['url']})
-		if resp['_items']: continue
+		existing = vpapi.getitems('speeches', where={'sources.url': dp['prepis']['url']})
+		if existing: continue
 
 		logging.info('Scraping debate part %s %s-%s (id=%s)' %
 			(dp['dátum'], dp['trvanie']['od'], dp['trvanie']['do'], dp['prepis']['id']))
