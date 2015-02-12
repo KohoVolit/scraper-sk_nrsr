@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 
+import os
 import json
 import unittest
 
 import parse
 import scrapeutils
 
-scrapeutils.USE_WEBCACHE = True
+BASE_DIR = os.path.dirname(__file__)
+FIXTURES_DIR = os.path.join(BASE_DIR, 'fixtures')
+
 
 def load_samples(filename):
 	"""Return JSON data from file with the given filename."""
-	with open('fixtures/%s.json' % filename, encoding='utf-8') as f:
+	with open('%s/%s.json' % (FIXTURES_DIR, filename), encoding='utf-8') as f:
 		return json.load(f)
 
 
@@ -202,4 +205,5 @@ class ParseDebateOfTerms56(MaxDiffTestCase):
 
 
 if __name__ == '__main__':
+	scrapeutils.USE_WEBCACHE = True
 	unittest.main()
