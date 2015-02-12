@@ -54,12 +54,9 @@ def sk_to_utc(dt_str):
 		dt_str = dt_str.replace(month, '%s.' % SK_MONTHS[month[:3].lower()])
 	dt = dateutil.parser.parse(dt_str, dayfirst=True)
 	if ':' in dt_str:
-		dt = LOCAL_TIMEZONE.localize(dt)
-		dt = dt.astimezone(pytz.utc)
-		format = '%Y-%m-%dT%H:%M:%S'
+		return vpapi.local_to_utc(dt, as_string=True)
 	else:
-		format = '%Y-%m-%d'
-	return dt.strftime(format)
+		return dt.strftime('%Y-%m-%d')
 
 
 def datestring_add(date_str, days):
