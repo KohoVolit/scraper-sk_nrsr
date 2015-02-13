@@ -11,6 +11,8 @@ import requests
 
 import scrapeutils
 
+BASE_DIR = os.path.dirname(__file__)
+
 terms = {
 	'1': {'start_date': '1994-10-01', 'end_date': '1998-09-25'},
 	'2': {'start_date': '1998-09-26', 'end_date': '2002-09-21'},
@@ -73,7 +75,7 @@ def mp(id, term):
 
 	image_url = html.find('.//div[@class="mp_foto"]/img').get('src')
 	image = requests.get(image_url).content
-	with open('dummy-image.jpg', 'rb') as f:
+	with open(os.path.join(BASE_DIR, 'dummy-image.jpg'), 'rb') as f:
 		dummy_image = f.read()
 	result['fotka'] = image_url if image != dummy_image else ''
 
