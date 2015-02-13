@@ -25,9 +25,6 @@ BASE_DIR = os.path.dirname(__file__)
 CONF_DIR = os.path.join(BASE_DIR, 'conf')
 LOGS_DIR = '/var/log/scrapers/sk/nrsr'
 
-scrapeutils.USE_WEBCACHE = False
-LOCAL_TIMEZONE = pytz.timezone('Europe/Bratislava')
-
 SK_MONTHS = {
 	'jan': 1,
 	'feb': 2,
@@ -1199,6 +1196,7 @@ def main():
 	try:
 		# set-up the API access
 		vpapi.parliament('sk/nrsr')
+		vpapi.timezone('Europe/Bratislava')
 		with open(os.path.join(CONF_DIR, 'private.json'), encoding='utf8') as f:
 			creds = json.load(f)
 		vpapi.authorize(creds['api_user'], creds['password'])
