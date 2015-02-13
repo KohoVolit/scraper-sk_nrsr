@@ -54,7 +54,7 @@ def sk_to_utc(dt_str):
 		dt_str = dt_str.replace(month, '%s.' % SK_MONTHS[month[:3].lower()])
 	dt = dateutil.parser.parse(dt_str, dayfirst=True)
 	if ':' in dt_str:
-		return vpapi.local_to_utc(dt, as_string=True)
+		return vpapi.local_to_utc(dt, to_string=True)
 	else:
 		return dt.strftime('%Y-%m-%d')
 
