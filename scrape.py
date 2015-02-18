@@ -1277,7 +1277,7 @@ def main():
 
 	except BaseException as e:
 		logging.critical(e, exc_info=True)
-		if hasattr(e, 'response'):
+		if hasattr(e, 'response') and hasattr(e.response, '_content'):
 			logging.critical(e.response._content.decode('utf-8'))
 		status = 'interrupted' if isinstance(e, KeyboardInterrupt) else 'failed'
 
