@@ -89,13 +89,13 @@ def mp(id, term):
 
 
 def group_list(type, term=None):
-	"""Parse list of groups of a given type (committee, caucus, delegation, friendship group)."""
+	"""Parse list of groups of a given type (committee, parliamentary group, delegation, friendship group)."""
 	types = {
 		'committee': {
 			'url': 'http://www.nrsr.sk/web/default.aspx?SectionId=77',
 			'term_param_name': '_sectionLayoutContainer$ctl02$_currentTerm',
 		},
-		'caucus': {
+		'parliamentary group': {
 			'url': 'http://www.nrsr.sk/web/default.aspx?SectionId=69',
 			'term_param_name': '_sectionLayoutContainer$ctl02$_currentTerm',
 		},
@@ -153,7 +153,7 @@ def group_list(type, term=None):
 
 
 def group(type, id):
-	"""Parse group of a given type (committee, caucus, delegation, friendship group)
+	"""Parse group of a given type (committee, parliamentary group, delegation, friendship group)
 	from its profile webpage."""
 	types = {
 		'committee': {
@@ -161,7 +161,7 @@ def group(type, id):
 			'members_xpath': './/table[@class="tab_zoznam"]//tr',
 			'name_xpath': 'td[1]/a/strong',
 		},
-		'caucus': {
+		'parliamentary group': {
 			'url': 'http://www.nrsr.sk/web/Default.aspx?sid=poslanci/kluby/klub&ID=',
 			'members_xpath': './/table[@class="tab_zoznam"]//tr',
 			'name_xpath': 'td[1]/a/strong',
@@ -224,7 +224,7 @@ def group(type, id):
 				'meno': div.findtext('.//a/strong'),
 				'obdobia': [{'rola': div.findtext('.//span[1]').lower()}],
 			}
-			if type != 'caucus':
+			if type != 'parliamentary group':
 				member['klub'] = div.findtext('.//em')[1:-1]
 				if member['klub'] in ('-', 'nie je členom poslaneckého klubu'):
 					member['klub'] = None
@@ -236,7 +236,7 @@ def group(type, id):
 		# scraping older terms - list of members with membership roles and durations
 		result['členovia'] = []
 		for i, tr in enumerate(html.findall(types[type]['members_xpath'])):
-			if type in ('caucus', 'committee') and i < 2: continue
+			if type in ('parliamentary group', 'committee') and i < 2: continue
 			member = {
 				'id': re.search(r'PoslanecID=(\d+)', tr.find('td[1]//a').get('href')).group(1),
 				'meno': tr.findtext(types[type]['name_xpath']),
@@ -529,7 +529,7 @@ def motion(id):
 		result['hlasy'] = []
 		for td in mps.findall('.//td'):
 			if td.get('class') == 'hpo_result_block_title':
-				caucus = td.text.strip()
+				parl_group = td.text.strip()
 			else:
 				if not td.text: continue
 				vote = td.text[1].lower()
@@ -539,7 +539,7 @@ def motion(id):
 				id = re.search(r'PoslanecID=(\d+)', link)
 				mp = {
 					'meno': given_name.strip() + ' ' + family_name.strip(),
-					'klub': caucus,
+					'klub': parl_group,
 					'hlas': vote,
 					'id': id.group(1),
 					'url': 'http://www.nrsr.sk/web/' + link

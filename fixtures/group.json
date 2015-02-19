@@ -29,7 +29,7 @@
 		}
 	},
 	{
-		"type": "caucus",
+		"type": "parliamentary group",
 		"id": "41",
 		"expected":
 		{
@@ -128,7 +128,7 @@
 		}
 	},
 	{
-		"type": "caucus",
+		"type": "parliamentary group",
 		"id": "28",
 		"expected":
 		{

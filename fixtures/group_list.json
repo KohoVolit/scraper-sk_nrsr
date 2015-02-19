@@ -10,7 +10,7 @@
 		}
 	},
 	{
-		"type": "caucus",
+		"type": "parliamentary group",
 		"term": null,
 		"index": 0,
 		"expected":
@@ -52,7 +52,7 @@
 		}
 	},
 	{
-		"type": "caucus",
+		"type": "parliamentary group",
 		"term": "4",
 		"index": 1,
 		"expected":

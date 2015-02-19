@@ -461,7 +461,7 @@ def scrape_people(term):
 	Membership.scrape_chamber_changes_and_save(term)
 
 	# scrape groups and memberships in them
-	for type in ('committee', 'caucus', 'delegation', 'friendship group'):
+	for type in ('committee', 'parliamentary group', 'delegation', 'friendship group'):
 		groups = parse.group_list(type, term)
 		for group in groups['_items']:
 			logging.info('Scraping %s `%s` (id=%s)' % (type, group['názov'], group['id']))
@@ -471,7 +471,7 @@ def scrape_people(term):
 			o.save()
 			logging.info('Scraping its memberships')
 			Membership.scrape_from_group_and_save(type, group['id'], term)
-		logging.info('Scraped %s %s' % (len(groups['_items']), type + ('es' if type == 'caucus' else 's')))
+		logging.info('Scraped %s %ss' % (len(groups['_items']), type))
 
 
 def scrape_motions(term):
@@ -484,14 +484,14 @@ def scrape_motions(term):
 	"""
 	logging.info('Scraping motions of term `%s`' % term)
 
-	# prepare mappings from source identifier to id for MPs and caucuses
+	# prepare mappings from source identifier to id for MPs and parliamentary groups
 	chamber_id = get_chamber_id(term)
 
 	people = vpapi.getall('people', projection={'identifiers': 1})
 	mps = {mp['identifiers'][0]['identifier']: mp['id'] for mp in people if 'identifiers' in mp}
 
-	orgs = vpapi.getall('organizations', where={'classification': 'caucus', 'parent_id': chamber_id})
-	caucuses = {c['name']: c['id'] for c in orgs}
+	orgs = vpapi.getall('organizations', where={'classification': 'parliamentary group', 'parent_id': chamber_id})
+	parl_groups = {c['name']: c['id'] for c in orgs}
 
 	# prepare list of sessions that are not completely scraped yet
 	sessions_to_scrape = []
@@ -605,7 +605,7 @@ def scrape_motions(term):
 							'vote_event_id': vote_event_id,
 							'option': vote_options[v['hlas']],
 							'voter_id': mps.get(v['id']),
-							'group_id': caucuses.get(v['klub']),
+							'group_id': parl_groups.get(v['klub']),
 						})
 					if len(votes) > 0:
 						resp = vpapi.post('votes', votes)
