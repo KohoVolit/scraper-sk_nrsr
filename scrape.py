@@ -541,15 +541,12 @@ def scrape_motions(term):
 				# insert motion
 				logging.info('Scraping motion %s of %s (voted at %s)' % (i+1, len(motions['_items']), m['dátum']))
 				parsed_motion = parse.motion(m['id'])
-				date = sk_to_utc(m['dátum'])
-				if m['dátum'].endswith('00:00:00'):
-					date = sk_to_utc(m['dátum'][:10]) + 'T00:00:00'
 				motion = {
 					'organization_id': chamber_id,
 					'legislative_session_id': session_id,
 					'identifier': parsed_motion['číslo'],
 					'text': parsed_motion['názov'],
-					'date': date,
+					'date': sk_to_utc(m['dátum']),
 					'sources': [{
 						'url': parsed_motion['url'],
 						'note': 'Hlasovanie na webe NRSR'
