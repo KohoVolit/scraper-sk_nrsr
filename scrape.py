@@ -1044,7 +1044,7 @@ def scrape_new_debates(term):
 		# stop at very recent debate parts (may be incomplete)
 		start_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['od']))
 		sd = datetime.strptime(start_datetime, '%Y-%m-%dT%H:%M:%S')
-		if 'prepis' not in dp or datetime.utcnow() - sd < timedelta(hours=12):
+		if datetime.utcnow() - sd < timedelta(days=5):
 			break
 
 		# skip already scraped debate parts
