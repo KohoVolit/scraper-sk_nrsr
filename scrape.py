@@ -87,6 +87,16 @@ def get_chamber_id(term):
 	return chamber['id'] if chamber else None
 
 
+def normalize_parlgroup_name(name):
+	"""Makes some corrections on name of a parliament group."""
+	if not name:
+		return name
+	out = re.sub(r'\s*([-–])\s*', '-', name)
+	if not out.startswith('Klub'):
+		out = 'Klub %s' % out
+	return out
+
+
 class Person:
 	@staticmethod
 	def _guess_gender(name):
@@ -214,6 +224,8 @@ class Organization:
 
 		o = Organization()
 		o.name = source['názov']
+		if type == 'parliamentary group':
+			o.name = normalize_parlgroup_name(o.name)
 		o.identifiers = [{'identifier': str(id), 'scheme': 'nrsr.sk'}]
 		o.classification = type
 
@@ -464,6 +476,7 @@ def scrape_people(term):
 	for type in ('committee', 'parliamentary group', 'delegation', 'friendship group'):
 		groups = parse.group_list(type, term)
 		for group in groups['_items']:
+			if term == '2' and type == 'parliamentary group' and 'nie sú členmi' in group['názov']: continue
 			logging.info('Scraping %s `%s` (id=%s)' % (type, group['názov'], group['id']))
 			o = Organization.scrape(type, group['id'])
 			o.set_dates(group)
@@ -492,6 +505,25 @@ def scrape_motions(term):
 
 	orgs = vpapi.getall('organizations', where={'classification': 'parliamentary group', 'parent_id': chamber_id})
 	parl_groups = {c['name']: c['id'] for c in orgs}
+
+	# add differently spelled parliamentary groups
+	group_corrections = {
+		'2': {
+			'Klub HZDS': 'Klub ĽS-HZDS',
+			'Klub SMK': 'Klub SMK-MKP',
+			'Klub Nezávislí': 'Klub Nezávislý',
+		},
+		'3': {
+			'Klub HZDS': 'Klub ĽS-HZDS',
+			'Klub SDKÚ': 'Klub SDKÚ-DS',
+			'Klub Smer': 'Klub SMER-SD',
+			'Klub Smer-SD': 'Klub SMER-SD',
+			'Klub KNP': 'Klub nezávislých poslancov NR SR',
+			'Klub Nezávislý': 'Klub nezávislých poslancov NR SR',
+		},
+	}
+	for k, v in group_corrections.get(term, {}).items():
+		parl_groups[k] = parl_groups[v]
 
 	# prepare list of sessions that are not completely scraped yet
 	sessions_to_scrape = []
@@ -601,11 +633,12 @@ def scrape_motions(term):
 					for v in parsed_motion['hlasy']:
 						# skip MPs not applying their mandate
 						if v['hlas'] == '-': continue
+						pg = normalize_parlgroup_name(v['klub'])
 						votes.append({
 							'vote_event_id': vote_event_id,
 							'option': vote_options[v['hlas']],
 							'voter_id': mps.get(v['id']),
-							'group_id': parl_groups.get(v['klub']),
+							'group_id': parl_groups.get(pg),
 						})
 					if len(votes) > 0:
 						resp = vpapi.post('votes', votes)
@@ -1282,7 +1315,7 @@ def main():
 		status = 'interrupted' if isinstance(e, KeyboardInterrupt) else 'failed'
 
 		# output to console to provoke an e-mail from Cron
-		print('Scraping of parliament sk/nrsr failed, see\n' + logname + '\nfor details.')
+		print('Scraping of parliament sk/nrsr failed, see\n\n' + logname + '\n\nfor details.')
 
 	finally:
 		logging.info(status.capitalize())
