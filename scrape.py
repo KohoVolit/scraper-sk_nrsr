@@ -772,9 +772,11 @@ def scrape_old_debates(term):
 				if not par[0] in ('(', '[', '/'):
 					par = '(%s)' % par
 
-			# convert slash pairs and brackets to parentheses
-			par = re.sub(r'(^|\s)/(.*?)/(\s|$)', r'\1(\2)\3', par)
+			# convert brackets to parentheses
 			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
+			# slash pairs are converted to parentheses too in term 1
+			if term == '1':
+				par = re.sub(r'(^|\s)/(.*?)/(\s|$)', r'\1(\2)\3', par)
 			# convert all inner nested parentheses to brackets
 			n = 1
 			while n >= 1:
@@ -927,7 +929,7 @@ def scrape_old_debates(term):
 					pass
 
 			# process eventual scene in this paragraph
-			scene_pattern = r'(.*?)\(([\d%s][^\(\)]{2,}[\.?!“])\s*\)(.*)$' % scrapeutils.CS_UPPERS
+			scene_pattern = r'(.*?)\(\s*([\d%s][^\(\)]{2,}[\.?!“])\s*\)(.*)$' % scrapeutils.CS_UPPERS
 			while True:
 				scene = re.match(scene_pattern, par, re.DOTALL)
 				if not scene: break
@@ -1118,8 +1120,7 @@ def scrape_new_debates(term):
 			# skip eventual speech number
 			if re.match('^(\d+)\.$', par): continue
 
-			# convert slash pairs and brackets to parentheses
-			par = re.sub(r'(^|[^\d])/(.*?)/', r'\1(\2)', par)
+			# convert brackets to parentheses
 			par = re.sub(r'\[(.*?)\]', r'(\1)', par)
 			# convert all inner nested parentheses to brackets
 			n = 1
@@ -1183,7 +1184,7 @@ def scrape_new_debates(term):
 			par = lxml.html.fromstring(par).text_content()
 
 			# process eventual scene in this paragraph
-			scene_pattern = r'(.*?)\(([\d%s][^\(\)]{2,}[\.?!“])\s*\)(.*)$' % scrapeutils.CS_UPPERS
+			scene_pattern = r'(.*?)\(\s*([\d%s][^\(\)]{2,}[\.?!“])\s*\)(.*)$' % scrapeutils.CS_UPPERS
 			while True:
 				scene = re.match(scene_pattern, par, re.DOTALL)
 				if not scene: break
