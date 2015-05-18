@@ -171,7 +171,7 @@ class Person:
 			resp = vpapi.post('people', scraped)
 		else:
 			# update by PUT is preferred over PATCH to correctly remove properties that no longer exist now
-			resp = vpapi.put('people/%s' % existing['id'], scraped, effective_date=effective_date)
+			resp = vpapi.put('people', existing['id'], scraped, effective_date=effective_date)
 
 		if resp['_status'] != 'OK':
 			raise Exception(self.name, resp)
@@ -260,7 +260,7 @@ class Organization:
 			resp = vpapi.post('organizations', scraped)
 		else:
 			# update by PUT is preferred over PATCH to correctly remove properties that no longer exist now
-			resp = vpapi.put('organizations/%s' % existing['id'], scraped, effective_date=effective_date)
+			resp = vpapi.put('organizations', existing['id'], scraped, effective_date=effective_date)
 
 		if resp['_status'] != 'OK':
 			raise Exception(self.name, resp)
@@ -401,7 +401,7 @@ class Membership:
 		}
 		to_close = vpapi.getall('memberships', where=query)
 		for m in to_close:
-			vpapi.patch('memberships/%s' % m['id'], {'end_date': datestring_add(effective_date, -1)})
+			vpapi.patch('memberships', m['id'], {'end_date': datestring_add(effective_date, -1)})
 
 	def save(self, create_new=True):
 		"""If a compatible membership already exists, update it. Otherwise,
@@ -423,7 +423,7 @@ class Membership:
 				id = existing['id']
 				break
 		if id:
-			resp = vpapi.put('memberships/%s' % id, to_save)
+			resp = vpapi.put('memberships', id, to_save)
 		else:
 			if not create_new: return
 			resp = vpapi.post('memberships', self.__dict__)
@@ -646,9 +646,9 @@ def scrape_motions(term):
 			# delete incomplete data if insertion of the motion, vote event or votes failed
 			except:
 				if motion_id:
-					vpapi.delete('motions/%s' % motion_id)
+					vpapi.delete('motions', motion_id)
 				if vote_event_id:
-					vpapi.delete('vote-events/%s' % vote_event_id)
+					vpapi.delete('vote-events', vote_event_id)
 				raise
 
 			scraped_motions_count += 1
@@ -690,9 +690,9 @@ def scrape_old_debates(term):
 		text = ''
 
 		if date > session_end_date:
-			vpapi.patch('events/%s' % session_id, {'end_date': date})
+			vpapi.patch('events', session_id, {'end_date': date})
 		if date > sitting_end_date:
-			vpapi.patch('events/%s' % sitting_id, {'end_date': date})
+			vpapi.patch('events', sitting_id, {'end_date': date})
 
 	logging.info('Scraping debates of term `%s`' % term)
 	chamber_id = get_chamber_id(term)
@@ -862,7 +862,7 @@ def scrape_old_debates(term):
 				if not created:
 					obsolete = vpapi.getall('speeches', where={'event_id': sitting_id})
 					for speech in obsolete:
-						vpapi.delete('speeches/%s' % speech['id'])
+						vpapi.delete('speeches', speech['id'])
 				continue
 
 			# process eventual start of a speech
@@ -955,8 +955,8 @@ def scrape_old_debates(term):
 			h, m = tm.strip('.').split('.')
 			final_date = '%s.%s.%s %s:%s:00' % (date[8:10], date[5:7], date[0:4], h.strip().zfill(2), m.strip().zfill(2))
 			final_date = sk_to_utc(final_date)
-			vpapi.patch('events/%s' % session_id, {'end_date': final_date})
-			vpapi.patch('events/%s' % sitting_id, {'end_date': final_date})
+			vpapi.patch('events', session_id, {'end_date': final_date})
+			vpapi.patch('events', sitting_id, {'end_date': final_date})
 
 		vpapi.post('speeches', speeches)
 		logging.info('Scraped %s speeches' % len(speeches))
@@ -1015,9 +1015,9 @@ def scrape_new_debates(term):
 		text = ''
 
 		if end_datetime > session_end_date:
-			vpapi.patch('events/%s' % session_id, {'end_date': end_datetime})
+			vpapi.patch('events', session_id, {'end_date': end_datetime})
 		if end_datetime > sitting_end_date:
-			vpapi.patch('events/%s' % sitting_id, {'end_date': end_datetime})
+			vpapi.patch('events', sitting_id, {'end_date': end_datetime})
 
 	logging.info('Scraping debates of term `%s`' % term)
 	chamber_id = get_chamber_id(term)
@@ -1321,7 +1321,7 @@ def main():
 	finally:
 		logging.info(status.capitalize())
 		if 'db_log' in locals():
-			vpapi.patch('logs/%s' % db_log['id'], {'status': status})
+			vpapi.patch('logs', db_log['id'], {'status': status})
 
 
 if __name__ == '__main__':
