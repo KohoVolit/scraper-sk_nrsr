@@ -307,7 +307,7 @@ class Membership:
 			elif change['zmena'] in ('Mandát zaniknutý', 'Mandát sa neuplatňuje', 'Mandát náhradníka zaniknutý'):
 				m.end_date = sk_to_utc(change['dátum'])
 				# only close an existing membership (counterexample: Érsek, Árpád, 27. 9. 2010 - 10. 3. 2012)
-				m.save(False)
+				m.save(True)
 			elif change['zmena'] in ('Mandát nadobudnutý vo voľbách', 'Mandát náhradníka získaný'):
 				pass
 			else:
@@ -403,9 +403,9 @@ class Membership:
 		for m in to_close:
 			vpapi.patch('memberships', m['id'], {'end_date': datestring_add(effective_date, -1)})
 
-	def save(self, create_new=True):
+	def save(self, update_only=False):
 		"""If a compatible membership already exists, update it. Otherwise,
-		create a new one. If `create_new` is False, only existing memberships
+		create a new one. If `update_only` is True, only existing memberships
 		are updated, no new one is created.
 		Memberships are compatible if their fields `start_date`, `role` and `post`
 		are compatible. Field 'end_date' is not checked to allow for later corrections
@@ -414,18 +414,24 @@ class Membership:
 		memberships = vpapi.getall('memberships',
 			where={'person_id': self.person_id, 'organization_id': self.organization_id},
 			sort='-start_date')
-		to_save = self.__dict__
+		to_save = self.__dict__.copy()
+
 		id = None
 		for existing in memberships:
 			if self._merge_values('start_date', to_save, existing) \
+					and to_save.get('end_date', '9999-12-31') >= existing.get('start_date', '0001-01-01') \
 					and self._merge_values('role', to_save, existing) \
 					and self._merge_values('post', to_save, existing):
 				id = existing['id']
+				self._merge_values('end_date', to_save, existing)
 				break
+			else:
+				to_save = self.__dict__.copy()
+
 		if id:
 			resp = vpapi.put('memberships', id, to_save)
 		else:
-			if not create_new: return
+			if update_only: return
 			resp = vpapi.post('memberships', self.__dict__)
 
 		if resp['_status'] != 'OK':
