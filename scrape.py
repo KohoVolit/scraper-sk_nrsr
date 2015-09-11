@@ -482,7 +482,9 @@ def scrape_people(term):
 	for type in ('committee', 'parliamentary group', 'delegation', 'friendship group'):
 		groups = parse.group_list(type, term)
 		for group in groups['_items']:
-			if term == '2' and type == 'parliamentary group' and 'nie sú členmi' in group['názov']: continue
+			if term == '2' and type == 'parliamentary group' and \
+					('nie sú členmi' in group['názov'] or 'Nezávislý' in group['názov']):
+				continue
 			logging.info('Scraping %s `%s` (id=%s)' % (type, group['názov'], group['id']))
 			o = Organization.scrape(type, group['id'])
 			o.set_dates(group)
