@@ -304,10 +304,19 @@ class Membership:
 			if change['zmena'] in ('Mandát vykonávaný (aktívny poslanec)', 'Mandát náhradníka vykonávaný'):
 				m.start_date = sk_to_utc(change['dátum'])
 				m.save()
+				# close previous membership of Izák, Jaroslav (9. 9. 2008 - 20. 5. 2009 - 12. 6. 2010)
+				if term == '4' and change['poslanec']['meno'] == 'Izák, Jaroslav' and change['dátum'] == '20. 5. 2009':
+					del m.start_date
+					m.end_date = change['dátum']
+					m.save()
 			elif change['zmena'] in ('Mandát zaniknutý', 'Mandát sa neuplatňuje', 'Mandát náhradníka zaniknutý'):
 				m.end_date = sk_to_utc(change['dátum'])
 				# only close an existing membership (counterexample: Érsek, Árpád, 27. 9. 2010 - 10. 3. 2012)
-				m.save(True)
+				existing_only = True
+				# except an inaccuracy in source data for Šimko, Ivan (15. 10. 2002 - 15. 10. 2002)
+				if term == '3' and change['poslanec']['meno'] == 'Šimko, Ivan':
+					existing_only = False
+				m.save(existing_only)
 			elif change['zmena'] in ('Mandát nadobudnutý vo voľbách', 'Mandát náhradníka získaný'):
 				pass
 			else:
