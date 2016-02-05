@@ -1010,7 +1010,7 @@ def scrape_new_debates(term):
 		and data from parent scope variables and update end date
 		of the corresponding session and sitting. Delete `text`
 		variable."""
-		nonlocal text
+		nonlocal text, last_speech_enddatetime
 		if not text: return
 		speech = {
 			'text': text.strip().replace('[', '(').replace(']', ')'),
@@ -1035,6 +1035,7 @@ def scrape_new_debates(term):
 			vpapi.patch('events', session_id, {'end_date': end_datetime})
 		if end_datetime > sitting_end_date:
 			vpapi.patch('events', sitting_id, {'end_date': end_datetime})
+		last_speech_enddatetime = datetime.strptime(end_datetime, '%Y-%m-%dT%H:%M:%S')
 
 	logging.info('Scraping debates of term `%s`' % term)
 	chamber_id = get_chamber_id(term)
@@ -1073,15 +1074,12 @@ def scrape_new_debates(term):
 		logging.info('Scraping debate part %s %s-%s (id=%s)' %
 			(dp['dátum'], dp['trvanie']['od'], dp['trvanie']['do'], dp['prepis']['id']))
 		dpart = parse.debate_of_terms56(dp['prepis']['id'])
+		if not dpart['riadky']: continue
 
 		end_datetime = sk_to_utc('%s %s' % (dp['dátum'], dp['trvanie']['do']))
 		dpart_kind = dp['druh']
 		dpart_url = dp['prepis']['url']
 		dpart_video = dp['video']['url'] if 'video' in dp else None
-		new_sitting = re.search(r'(\d+)\.?\s*deň', dpart['nadpis'])
-		if new_sitting is None:
-			logging.warn('Sitting number not found in the heading `%s`, debate part skipped' % dpart['nadpis'])
-			continue
 
 		if not session_name.startswith('%s. ' % dp['schôdza']):
 			# create new session event
@@ -1097,14 +1095,27 @@ def scrape_new_debates(term):
 			key = ('organization_id', 'type', 'identifier')
 			session_id, _ = get_or_create('events', session, key)
 			session_end_date = end_datetime
-			sitting_name = ''
 
-		if not sitting_name.startswith('%s. ' % new_sitting.group(1)):
+			# find the last moment of the last sitting of this session
+			session_last_sitting = vpapi.getfirst('events',
+				where={'type': 'sitting', 'parent_id': session_id},
+				sort='-start_date')
+			if session_last_sitting:
+				last_speech_enddatetime = datetime.strptime(session_last_sitting['end_date'], '%Y-%m-%dT%H:%M:%S')
+				sitting_identifier = session_last_sitting['identifier']
+				sitting_id = session_last_sitting['id']
+				sitting_end_date = session_last_sitting['end_date']
+			else:
+				last_speech_enddatetime = datetime.min
+				sitting_identifier = '0'
+
+		if sd - last_speech_enddatetime > timedelta(hours=5):
 			# create new sitting event
-			sitting_name = '%s. deň rokovania, %s' % (new_sitting.group(1), dp['dátum'])
+			sitting_identifier = str(int(sitting_identifier) + 1)
+			sitting_name = '%s. deň rokovania, %s' % (sitting_identifier, dp['dátum'])
 			sitting = {
 				'name': sitting_name,
-				'identifier': new_sitting.group(1),
+				'identifier': sitting_identifier,
 				'organization_id': chamber_id,
 				'type': 'sitting',
 				'start_date': start_datetime,
@@ -1112,7 +1123,7 @@ def scrape_new_debates(term):
 				'parent_id': session_id,
 			}
 			key = ('parent_id', 'type', 'identifier')
-			sitting_id, _created = get_or_create('events', sitting, key)
+			sitting_id, _ = get_or_create('events', sitting, key)
 			sitting_end_date = end_datetime
 
 			# save speeches of the previous sitting

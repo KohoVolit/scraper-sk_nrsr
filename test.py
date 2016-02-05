@@ -197,8 +197,9 @@ class ParseDebateOfTerms56(MaxDiffTestCase):
 			self.assertEqual(result, sample['expected'])
 
 	def test_nonexistent_debate(self):
-		"""parse.debates_of_terms56 should fail for debate that does not exist"""
-		self.assertRaises(RuntimeError, parse.debate_of_terms56, '1')
+		"""parse.debates_of_terms56 should return empty result for debate that does not exist"""
+		result = parse.debate_of_terms56('1')
+		self.assertEqual(result, {'riadky': []})
 
 
 # no tests for scraping of old debates as they are no more scraped after initial load

@@ -719,13 +719,12 @@ def new_debates_list(term, since_date=None, until_date=None):
 				link = a.get('href')
 				src = a.find('img').get('src')
 				if 'speak' in src:
-					id = re.search(r'SpeakerSectionID=(\d+)', link)
+					id = re.search(r'id=(\d+)', link)
 					debate_part['video'] = {'url': link, 'id': id.group(1)}
 				elif 'all' in src:
-					id = re.search(r'MeetingID=(\d+)', link)
-					debate_part['video_rokovania'] = {'url': link, 'id': id.group(1)}
+					debate_part['video_rokovania'] = {'url': link}
 				elif 'rewrite' in src:
-					id = re.search(r'SpeakerSectionID=(\d+)', link)
+					id = re.search(r'id=(\d+)', link)
 					debate_part['prepis'] = {'url': link, 'id': id.group(1)}
 				else:
 					raise RuntimeError('Unrecognized link in section %s/%s/%s' %
@@ -758,23 +757,19 @@ def debate_of_terms56(id):
 	"""Parse a debate transcript in terms 5-6 format and return its
 	structure."""
 	# download the debate transcript
-	url = 'http://tv.nrsr.sk/NRSRInternet/indexpopup.aspx?module=Internet&page=SpeakerSection&SpeakerSectionID=%s&ViewType=content&' % id
+	url = 'http://tv.nrsr.sk/transcript?id=%s' % id
 	content = scrapeutils.download(url)
-	if 'Unexpected error!' in content:
-		raise RuntimeError("Debate with id '%s' does not exist" % id)
 
 	# parse to HTML tree
 	html = lxml.html.fromstring(content)
-	result = {
-		'nadpis': html.findtext('.//h1'),
-		'podnadpis': html.findtext('.//h2'),
-	}
-
-	# parse headings and individual lines used as paragraphs
-	main_block = html.find('.//div[@style="text-align: justify;"]')
-	if main_block is not None:
+	main_block = html.find('body/div')
+	if not len(main_block) and not main_block.text.strip():
+		result = {'riadky': []}
+	else:
+		# parse headings and individual lines used as paragraphs
 		main_content = lxml.html.tostring(main_block, encoding='unicode', with_tail=False)
-		main_content = main_content[len('<div style="text-align: justify;">'):-len('</div>')]
-		result['riadky'] = re.split('<br\s*/?>', main_content)
+		main_content = main_content[len('<div>'):-len('</div>')]
+		main_content = main_content.replace('<p>', '').replace('</p>', '')
+		result = {'riadky': re.split('<br\s*/?>', main_content)}
 
 	return scrapeutils.plaintext(result)
