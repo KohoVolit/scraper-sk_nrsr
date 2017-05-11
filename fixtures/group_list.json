@@ -5,7 +5,7 @@
 		"index": 0,
 		"expected":
 		{
-			"id": "115",
+			"id": "134",
 			"názov": "Mandátový a imunitný výbor NR SR"
 		}
 	},
@@ -15,9 +15,9 @@
 		"index": 0,
 		"expected":
 		{
-			"id": "41",
-			"názov": "Klub SMER – SD",
-			"od": "4. 4. 2012",
+			"id": "42",
+			"názov": "Klub SMER - sociálna demokracia",
+			"od": "23. 3. 2016",
 			"do": "..."
 		}
 	},
@@ -27,7 +27,7 @@
 		"index": 0,
 		"expected":
 		{
-			"id": "35",
+			"id": "43",
 			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy"
 		}
 	},
@@ -37,7 +37,7 @@
 		"index": 0,
 		"expected":
 		{
-			"id": "73",
+			"id": "101",
 			"názov": "Skupina priateľstva s Českou republikou"
 		}
 	},

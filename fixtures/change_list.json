@@ -1,34 +1,34 @@
 [
-	{
-		"term": "5",
-		"index": 51,
-		"expected":
-		{
-			"dátum": "10. 3. 2012",
-			"poslanec": {
-				"meno": "Jarjabek, Dušan",
-				"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=61&CisObdobia=5",
-				"id": "61",
-				"klub": "-"
-			},
-			"zmena": "Mandát zaniknutý",
-			"dôvod": "Jeho mandát zanikol ukončením volebného obdobia."
-		}
-	},
-	{
-		"term": null,
-		"index": -1,
-		"expected":
-		{
-			"dátum": "11. 3. 2012",
-			"poslanec": {
-				"meno": "Martvoň, Anton",
-				"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=883&CisObdobia=6",
-				"id": "883",
-				"klub": "SMER – SD"
-			},
-			"zmena": "Mandát nadobudnutý vo voľbách",
-			"dôvod": "Stal sa poslancom NR SR."
-		}
-	}
+    {
+        "term": "5",
+        "index": 51,
+        "expected":
+        {
+            "dátum": "10. 3. 2012",
+            "poslanec": {
+                "meno": "Jarjabek, Dušan",
+                "url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=61&CisObdobia=5",
+                "id": "61",
+                "klub": "-"
+            },
+            "zmena": "Mandát zaniknutý",
+            "dôvod": "Jeho mandát zanikol ukončením volebného obdobia."
+        }
+    },
+    {
+        "term": null,
+        "index": -1,
+        "expected":
+        {
+            "dátum": "6. 3. 2016",
+            "poslanec": {
+                "meno": "Šebej, František",
+                "url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=127&CisObdobia=7",
+                "id": "127",
+                "klub": "MOST - HÍD"
+            },
+            "zmena": "Mandát nadobudnutý vo voľbách",
+            "dôvod": "Stal sa poslancom NR SR."
+        }
+    }
 ]

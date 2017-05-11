@@ -1,16 +1,16 @@
 [
 	{
 		"id": "773",
-		"term": "6",
+		"term": "7",
 		"memb_index": 1,
 		"expected":
 		{
 			"id": "773",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=773&CisObdobia=6",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/poslanec&PoslanecID=773&CisObdobia=7",
 			"meno": "Jozef",
 			"priezvisko": "Viskupič",
 			"titul": "Mgr.",
-			"kandidoval(a) za": "OĽaNO",
+			"kandidoval(a) za": "OBYČAJNÍ ĽUDIA a nezávislé osobnosti (OĽANO-NOVA)",
 			"narodený(á)": "8. 2. 1976",
 			"národnosť": "slovenská",
 			"bydlisko": "Trnava",
@@ -20,8 +20,9 @@
 			"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=773&ImageWidth=140",
 			"členstvo": [
 				{
-					"meno": "Výbor NR SR pre európske záležitosti",
-					"rola": "overovateľ"
+
+					"meno": "Výbor NR SR pre kultúru a médiá",
+					"rola": "podpredseda"
 				}
 			]
 		}
@@ -37,7 +38,7 @@
 			"meno": "Rudolf",
 			"priezvisko": "Zajac",
 			"titul": "MUDr.",
-			"kandidoval(a) za": "ANO",
+			"kandidoval(a) za": "Aliancia nového občana",
 			"narodený(á)": "9. 2. 1951",
 			"národnosť": "slovenská",
 			"bydlisko": "Bratislava",

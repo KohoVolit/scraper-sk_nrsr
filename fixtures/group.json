@@ -1,198 +1,154 @@
 [
 	{
 		"type": "committee",
-		"id": "116",
+		"id": "136",
 		"expected":
 		{
-			"id": "116",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=vybory/vybor&ID=116",
-			"názov": "Výbor NR SR pre nezlučiteľnosť funkcií",
+			"id": "136",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=vybory/vybor&ID=136",
+			"názov": "Ústavnoprávny výbor NR SR",
 			"podnadpis": "Základné informácie o výbore",
-			"opis": "<div align=\"justify\">Výbor NR SR pre nezlučiteľnos",
-			"tel": "5972 1490",
-			"fax": "5441 5468",
-			"email": "vnf@nrsr.sk",
-			"ďalšie dokumenty": "http://www.nrsr.sk/dl/Browser/Committee?committeeExternalId=116",
+			"opis": "<span id=\"_sectionLayoutContainer_ctl01__basicInfo",
+			"tel": "5972 1217",
+			"email": "upv@nrsr.sk",
+			"ďalšie dokumenty": "http://www.nrsr.sk/dl/Browser/Committee?committeeExternalId=136",
 			"členovia": [
 				{
-					"id": "287",
-					"meno": "Přidal, Alojz",
-					"klub": "Klub KDH",
+					"id": "310",
+					"meno": "Madej, Róbert",
+					"klub": "Klub SMER - SD",
 					"obdobia": [
 						{
 							"rola": "predseda"
 						}
 					],
-					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=287&ImageWidth=44"
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=310&ImageWidth=44"
 				}
 			]
 		}
 	},
 	{
 		"type": "parliamentary group",
-		"id": "41",
+		"id": "42",
 		"expected":
 		{
-			"id": "41",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/kluby/klub&ID=41",
-			"názov": "Klub SMER – SD",
-			"tel": "02/5972 - 1395",
-			"fax": "02/5441 - 4255, 02/5441 - 3708",
-			"email": "klubsmer@nrsr.sk",
+			"id": "42",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/kluby/klub&ID=42",
+			"názov": "Klub SMER - sociálna demokracia",
+			"opis": "<span id=\"_sectionLayoutContainer_ctl01__basicInfo",
+			"email": "klub.smer@nrsr.sk",
 			"členovia": [
 				{
-					"id": "278",
-					"meno": "Laššáková, Jana",
+					"id": "659",
+					"meno": "Glváč, Martin",
 					"obdobia": [
 						{
-							"rola": "predsedníčka"
+							"rola": "predseda"
 						}
 					],
-					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=278&ImageWidth=44"
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=659&ImageWidth=44"
 				}
 			]
 		}
 	},
 	{
 		"type": "delegation",
-		"id": "35",
+		"id": "45",
 		"expected":
 		{
-			"id": "35",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/delegacie/delegacia&ID=35",
-			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy",
-			"opis": "<div align=\"justify\">\r\n<p>\u00a0</p>\r\n<p>Rada Európy je",
+			"id": "45",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/delegacie/delegacia&ID=45",
+			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení OBSE",
 			"členovia": [
 				{
-					"id": "679",
-					"meno": "Nachtmannová, Oľga",
-					"klub": "Klub SMER – SD",
+					"id": "100",
+					"meno": "Osuský, Peter",
+					"klub": "Klub SaS",
 					"obdobia": [
 						{
-							"rola": "vedúca"
+							"rola": "vedúci"
 						}
 					],
-					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=679&ImageWidth=44"
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=100&ImageWidth=44"
 				}
 			]
 		}
 	},
 	{
 		"type": "friendship group",
-		"id": "73",
+		"id": "101",
 		"expected":
 		{
-			"id": "73",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/sp/sp&SkupinaId=73",
+			"id": "101",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/sp/sp&SkupinaId=101",
 			"názov": "Skupina priateľstva s Českou republikou",
-			"kontakt": "Jarmila Nováková, Odbor zahraničných vzťahov a agendy EÚ Kancelárie Národnej rady Slovenskej republiky",
+			"kontakt": "Jarmila Nováková, Odbor zahraničných vzťahov a protokolu Kancelárie Národnej rady Slovenskej republiky",
 			"tel": "+421 59 72 25 12",
 			"fax": "+421 54 41 53 24",
 			"email": "jarmila.novakova@nrsr.sk",
 			"členovia": [
 				{
-					"id": "721",
-					"meno": "Jasaň, Viliam",
-					"klub": "Klub SMER – SD",
+					"id": "972",
+					"meno": "Smolíková, Eva",
+					"klub": "Klub SNS",
 					"obdobia": [
 						{
-							"rola": "predseda"
+							"rola": "predsedníčka"
 						}
 					],
-					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=721&ImageWidth=44"
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=972&ImageWidth=44"
 				}
 			]
 		}
 	},
 	{
 		"type": "committee",
-		"id": "75",
+		"id": "142",
 		"expected":
 		{
-			"id": "75",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=vybory/vybor&ID=75",
-			"názov": "Výbor NR SR pre nezlučiteľnosť funkcií",
+			"id": "142",
+			"url": "vzd@nrsr.sk",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=vybory/vybor&ID=142",
+			"názov": "Výbor NR SR pre zdravotníctvo",
+			"podnadpis": "Základné informácie o výbore",
+			"tel": "5972 1229",
+			"email": "vzd@nrsr.sk",
+			"opis": "<span id=\"_sectionLayoutContainer_ctl01__basicInfo",
 			"členovia": [
 				{
-					"id": "645",
-					"meno": "Belásová, Milada",
+					"id": "149",
+					"klub": "Klub SNS",
+					"meno": "Zelník, Štefan",
 					"obdobia": [
 						{
-							"rola": "členka",
-							"od": "4. 7. 2006",
-							"do": "12. 6. 2010"
+							"rola": "predseda"
 						}
-					]
+					],
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=149&ImageWidth=44"
 				}
-			]
-		}
-	},
-	{
-		"type": "parliamentary group",
-		"id": "28",
-		"expected":
-		{
-			"id": "28",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=poslanci/kluby/klub&ID=28",
-			"názov": "Klub SDKÚ – DS",
-			"podnadpis": "NR SR vzala na vedomie utvorenie Klubu SDKÚ Uznesením NR SR č. 11.",
-			"členovia": [
-				{
-					"id": "647",
-					"meno": "Cibulková, Katarína",
-					"obdobia": [
-						{
-							"rola": "členka",
-							"od": "4. 7. 2006",
-							"do": "12. 6. 2010"
-						}
-					]
-				}
-			]
+			],
+			"ďalšie dokumenty": "http://www.nrsr.sk/dl/Browser/Committee?committeeExternalId=142"
 		}
 	},
 	{
 		"type": "delegation",
-		"id": "19",
+		"id": "44",
 		"expected":
 		{
-			"id": "19",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/delegacie/delegacia&ID=19",
-			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení Rady Európy",
+			"id": "44",
+			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/delegacie/delegacia&ID=44",
+			"názov": "Stála delegácia NR SR v Parlamentnom zhromaždení NATO",
 			"členovia": [
 				{
-					"id": "228",
-					"meno": "Angyalová, Edita",
+					"id": "382",
+					"meno": "Hrnko, Anton",
+					"klub": "Klub SNS",
 					"obdobia": [
 						{
-							"rola": "členka",
-							"od": "7. 9. 2006",
-							"do": "30. 4. 2007"
+							"rola": "vedúci"
 						}
-					]
-				}
-			]
-		}
-	},
-	{
-		"type": "friendship group",
-		"id": "27",
-		"expected":
-		{
-			"id": "27",
-			"url": "http://www.nrsr.sk/web/Default.aspx?sid=eu/sp/sp&SkupinaId=27",
-			"názov": "Skupina priateľstva s Českou republikou",
-			"členovia": [
-				{
-					"id": "226",
-					"meno": "Abrhan, Pavol",
-					"obdobia": [
-						{
-							"rola": "Člen",
-							"od": "4. 7. 2006",
-							"do": "12. 6. 2010"
-						}
-					]
+					],
+					"fotka": "http://www.nrsr.sk/web/dynamic/PoslanecPhoto.aspx?PoslanecID=382&ImageWidth=44"
 				}
 			]
 		}

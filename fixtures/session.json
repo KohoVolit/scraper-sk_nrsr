@@ -5,13 +5,13 @@
 		"index": 0,
 		"expected":
 		{
-			"dátum": "2.5.2012 13:04:15",
+			"dátum": "18.4.2016 13:05:20",
 			"číslo": "1",
-			"názov": "Prezentácia.",
-			"id": "30051",
+			"názov": "Prezentácia",
+			"id": "37195",
 			"url": {
-				"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=30051",
-				"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=30051"
+				"výsledok": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasovanie&ID=37195",
+				"kluby": "http://www.nrsr.sk/web/Default.aspx?sid=schodze/hlasovanie/hlasklub&ID=37195"
 			}
 		}
 	},

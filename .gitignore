@@ -2,6 +2,7 @@ webcache/
 oldcache/
 vpapi.py
 server_cert.pem
+server_cert_prod.pem
 conf/private.json
 
 
